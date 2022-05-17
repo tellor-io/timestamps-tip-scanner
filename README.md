@@ -55,5 +55,25 @@ Example:
 ```
 
 Run commands:
-```python src/timestamps_tip_scanner.py```
+```
+git clone https://github.com/tellor-io/timestamps-tip-scanner.git
+```
+```
+cd timestamps-tip-scanner
+```
+```
+touch .env
+vi .env
+NODE_API = https://polygon-mumbai.infura.io/v3/<put_your_api_key_here>
+```
+```
+python3 -m venv venv
+source venv/bin/activate
+```
+```
+pip install -r requirements-dev.txt
+```
+```
+python src/timestamps_tip_scanner.py
+```
 
