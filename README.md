@@ -77,3 +77,9 @@ pip install -r requirements-dev.txt
 python src/timestamps_tip_scanner.py
 ```
 
+- to start at a certain block edit record.json with the block you want to start with
+  
+```json
+{"last_scanned_block": "add block number here"
+```
+
