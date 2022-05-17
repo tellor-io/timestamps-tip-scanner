@@ -1,0 +1,6 @@
+*.json
+*.ipynb
+*.egg-info
+.env
+.tox
+__pycache__
