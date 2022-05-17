@@ -2,7 +2,7 @@
 -- still needs to scan for feed tips
 -- also this only works with polygon-mumbai for now but will be edited to work with all EVM chains once we decide we like it.
 
-- ideas and a chunk of the code came from this example, refactored to use a tip scanner:
+- ideas and a chunk of the code came from this example, refactored to use as a tip scanner:
 https://web3py.readthedocs.io/en/stable/examples.html#example-code
 
 #### returns a json file that looks like this:
