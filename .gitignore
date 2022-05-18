@@ -1,4 +1,4 @@
-*.json
+record.json
 *.ipynb
 *.egg-info
 .tox
