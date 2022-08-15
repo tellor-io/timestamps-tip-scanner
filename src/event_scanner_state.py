@@ -3,8 +3,7 @@ from web3.datastructures import AttributeDict
 
 
 class EventScannerState(ABC):
-    """Application state that remembers what blocks we have scanned in the case of crash.
-    """
+    """Application state that remembers what blocks we have scanned in the case of crash."""
 
     @abstractmethod
     def get_last_scanned_block(self) -> int:

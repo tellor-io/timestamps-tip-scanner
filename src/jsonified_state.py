@@ -31,6 +31,7 @@ class JSONifiedState(EventScannerState):
     def reset(self):
         """Create initial state of nothing scanned."""
         import requests
+
         start_timestamp = int(
             datetime.datetime.today()
             .replace(hour=00, minute=00, second=0, microsecond=0)
@@ -51,8 +52,9 @@ class JSONifiedState(EventScannerState):
         try:
             self.state = json.load(open(self.freports, "rt"))
             print(
-                f"Restored the state, last block scan ended at {self.state['last_scanned_block']}")
-            print(self.state['last_scanned_block'])
+                f"Restored the state, last block scan ended at {self.state['last_scanned_block']}"
+            )
+            print(self.state["last_scanned_block"])
         except (IOError, json.decoder.JSONDecodeError):
             print("State starting from scratch")
             self.reset()
@@ -64,14 +66,10 @@ class JSONifiedState(EventScannerState):
         self.last_save = time.time()
 
     def reset_feedtips(self):
-        self.feed_tips = {
-                "feed_tips": {}
-        }
+        self.feed_tips = {"feed_tips": {}}
 
     def reset_singletips(self):
-        self.single_tips = {
-                "single_tips": {}
-        }
+        self.single_tips = {"single_tips": {}}
 
     def restore_feed_tips(self):
         """Restore the last scan state from a file."""
@@ -104,7 +102,7 @@ class JSONifiedState(EventScannerState):
     def save_feed_tips(self):
         with open(self.ffeedtips, "wt") as f:
             json.dump(self.feed_tips, f)
-    
+
     def process_feed_timestamps(self, query_id: str, timestamp: int):
         feed_tips = self.feed_tips["feed_tips"]
         if query_id not in feed_tips:
@@ -118,6 +116,7 @@ class JSONifiedState(EventScannerState):
             single_tips[query_id] = []
         else:
             single_tips[query_id].append(timestamp)
+
     #
     # EventScannerState methods implemented below
     #
@@ -160,7 +159,6 @@ class JSONifiedState(EventScannerState):
             reporter[query_id] = []
 
         queryId = reporter[query_id]
-        
 
         queryId.append(args._time)
         return f"{txhash}-{log_index}"
