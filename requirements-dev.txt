@@ -1,3 +1,4 @@
 tqdm
 web3
 python-dotenv
+multicall

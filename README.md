@@ -1,5 +1,4 @@
 ****WIP****
--- still needs to scan for feed tips
 -- also this only works with polygon-mumbai for now but will be edited to work with all EVM chains once we decide we like it.
 
 - ideas and a chunk of the code came from this example, refactored to use as a tip scanner:
@@ -8,19 +7,17 @@ https://web3py.readthedocs.io/en/stable/examples.html#example-code
 #### returns a json file that looks like this:
 ```json
 {
-    "last_scanned_block": 26339243,
-    "reporter": {
-        "reporter address": {
-            "today's date": {
-                "query id": {
-                    "list of total submissions for the batch of blocks scanned today": [
-                        1650770213],
-                    "one time eligible timestamps": [
-                        1650766071
-                    ]
-                }
-            }
-        }
+    "last_scanned_block": 27636952,
+    "0xdedC604896bE034283365D65118Cce2942F99392": {
+        "0xd913406746edf7891a09ffb9b26a12553bbf4d25ecf8e530ec359969fe6a7a9c": [
+            1660588046,
+            1660589851,
+            1660591667,
+            1660593476,
+            1660595297,
+            1660597107,
+            1660598917
+        ]
     }
 }
 ```
@@ -28,29 +25,15 @@ https://web3py.readthedocs.io/en/stable/examples.html#example-code
 Example: 
 ```json
 {
-    "last_scanned_block": 26339243,
-    "reporter": {
-        "0xdedC604896bE034283365D65118Cce2942F99392": {
-            "May-16-2022": {,
-                "0xb9d5e25dabd5f0a48f45f5b6b524bac100df05eaf5311f3e5339ac7c3dd0a37e": {
-                    "all_submissions": [
-                        1651135148,
-                        1651156177,
-                        1651166664,
-                        1651180563,
-                        1651190980,
-                        1651236210,
-                        1651239687,
-                        1651255325,
-                        1651265755,
-                        1651323102
-                    ],
-                    "one_time_tips": [
-                        1650778883
-                    ]
-                }
-            }
-        }
+    "single_tips": {
+        "0xd913406746edf7891a09ffb9b26a12553bbf4d25ecf8e530ec359969fe6a7a9c": [
+            1660589851,
+            1660591667,
+            1660593476,
+            1660595297,
+            1660597107,
+            1660598917
+        ]
     }
 }
 ```
@@ -66,6 +49,8 @@ cd timestamps-tip-scanner
 touch .env
 vi .env
 NODE_API = https://polygon-mumbai.infura.io/v3/<put_your_api_key_here>
+AUTOPAY_ADDRESS = "0x7B49420008BcA14782F2700547764AdAdD54F813"
+TELLORFLEX_ADDRESS = "0x840c23e39F9D029fFa888F47069aA6864f0401D7"
 ```
 ```
 python3 -m venv venv
@@ -74,11 +59,16 @@ source venv/bin/activate
 ```
 pip install -r requirements-dev.txt
 ```
+To fetch a reports' timestamp, run:
 ```
 python src/timestamps_tip_scanner.py
 ```
+Then to filter tip eligible ones, run:
+```
+python src/Call.py
+```
 
-- to start at a certain block edit record.json with the block you want to start with
+- to start at a certain block edit report_timestamps.json with the block you want to start with
   
 ```json
 {"last_scanned_block": "add block number here"
