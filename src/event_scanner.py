@@ -129,11 +129,6 @@ class EventScanner:
                                  evt["event"], evt["blockNumber"])
                     processed = self.state.process_event(evt)
                     all_processed.append(processed)
-           
-            ids = self.state.get_query_ids(self.reporter)
-            if ids:
-                for i in ids:
-                    self.state.filter_timestamps(self.web3, self.reporter, i)
 
         return end_block, all_processed
 

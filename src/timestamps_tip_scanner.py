@@ -1,29 +1,26 @@
 import json
-import os
-import sys
 import time
 
 from tqdm import tqdm
 from web3 import Web3
 from dotenv import load_dotenv
+from eth_utils import to_checksum_address
 from event_scanner import EventScanner
 from jsonified_state import JSONifiedState
 from web3.providers.rpc import HTTPProvider
+from utils import fallback_input
+
 
 print(f"env loaded: {load_dotenv()}")
 
-# We use tqdm library to render a nice progress bar in the console
-# https://pypi.org/project/tqdm/
-
-
 def run():
     reporter = input("reporter address: ")
-    if not Web3.isChecksumAddress(reporter):
-            print("wrong address type ...")
-            sys.exit(1)
+    try:
+        reporter = to_checksum_address(reporter)
+    except ValueError:
+        print(f"contract address must be a hex string. Got: {reporter}")
     
-    api_url = os.getenv("NODE_API")
-    print(api_url)
+    api_url = fallback_input("NODE_URI")
 
     provider = HTTPProvider(api_url)
 
@@ -38,7 +35,7 @@ def run():
     with open('abi/tellorflex.json') as tellorflex_abi:
         tellorflex_abi = json.load(tellorflex_abi)
 
-    tellorflex_address = "0x41b66dd93b03e89D29114a7613A6f9f0d4F40178"
+    tellorflex_address = fallback_input("TELLOR_FLEX_ADDRESS")
     tellorflex_contract = w3.eth.contract(
         address=tellorflex_address, abi=tellorflex_abi)
 
@@ -54,10 +51,10 @@ def run():
         contract=tellorflex_contract,
         events=[tellorflex_contract.events.NewReport],
         filters={"address": tellorflex_address},
-        # Infura max block range
+        # Infura max block ranger
         max_chunk_scan_size=3499
     )
-
+    
     # Assume we might have scanned the blocks all the way to the last Ethereum block
     # that mined a few seconds before the previous scan run ended.
     # Because there might have been a minor Etherueum chain reorganisations

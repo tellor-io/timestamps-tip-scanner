@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from event_scanner_state import EventScannerState
 import datetime
 import json
@@ -20,7 +20,10 @@ class JSONifiedState(EventScannerState):
 
     def __init__(self):
         self.state = None
-        self.fname = "record.json"
+        self.eligible = None
+        self.freports = "report_timestamps.json"
+        self.fsingletips = "single_tips.json"
+        self.ffeedtips = "feed_tips.json"
         # How many second ago we saved the JSON file
         self.last_save = 0
         self.date = datetime.datetime.today().strftime("%b-%d-%Y")
@@ -41,25 +44,80 @@ class JSONifiedState(EventScannerState):
         print(f"{zero_block}, zero_block")
         self.state = {
             "last_scanned_block": int(zero_block),
-            "reporter": {}
         }
 
     def restore(self):
         """Restore the last scan state from a file."""
         try:
-            self.state = json.load(open(self.fname, "rt"))
+            self.state = json.load(open(self.freports, "rt"))
             print(
                 f"Restored the state, last block scan ended at {self.state['last_scanned_block']}")
+            print(self.state['last_scanned_block'])
         except (IOError, json.decoder.JSONDecodeError):
             print("State starting from scratch")
             self.reset()
 
     def save(self):
         """Save everything we have scanned so far in a file."""
-        with open(self.fname, "wt") as f:
+        with open(self.freports, "wt") as f:
             json.dump(self.state, f)
         self.last_save = time.time()
 
+    def reset_feedtips(self):
+        self.feed_tips = {
+                "feed_tips": {}
+        }
+
+    def reset_singletips(self):
+        self.single_tips = {
+                "single_tips": {}
+        }
+
+    def restore_feed_tips(self):
+        """Restore the last scan state from a file."""
+        try:
+            self.feed_tips = json.load(open(self.ffeedtips, "rt"))
+            print(f"Feed-tips file restored")
+        except (IOError, json.decoder.JSONDecodeError):
+            print("Feed-tips file starting from scratch")
+            self.reset_feedtips()
+
+    def restore_singletips(self):
+        try:
+            self.single_tips = json.load(open(self.fsingletips, "rt"))
+            print(f"Single-tips file restored")
+        except (IOError, json.decoder.JSONDecodeError):
+            print("Single-tips file starting from scratch")
+            self.reset_singletips()
+
+    def timestampsperEOA(self, EOA: str) -> Optional[List[int]]:
+        try:
+            return self.state[f"{EOA}"]
+        except KeyError:
+            print(f"Timestamps for {EOA} not found in json!")
+            return
+
+    def save_single_tips(self):
+        with open(self.fsingletips, "wt") as f:
+            json.dump(self.single_tips, f)
+
+    def save_feed_tips(self):
+        with open(self.ffeedtips, "wt") as f:
+            json.dump(self.feed_tips, f)
+    
+    def process_feed_timestamps(self, query_id: str, timestamp: int):
+        feed_tips = self.feed_tips["feed_tips"]
+        if query_id not in feed_tips:
+            feed_tips[query_id] = []
+        else:
+            feed_tips[query_id].append(timestamp)
+
+    def process_singletip_timestamps(self, query_id: str, timestamp: int):
+        single_tips = self.single_tips["single_tips"]
+        if query_id not in single_tips:
+            single_tips[query_id] = []
+        else:
+            single_tips[query_id].append(timestamp)
     #
     # EventScannerState methods implemented below
     #
@@ -70,9 +128,6 @@ class JSONifiedState(EventScannerState):
 
     def delete_data(self, since_block):
         """Remove potentially reorganised blocks from the scan data."""
-        # for block_num in range(since_block, self.get_last_scanned_block()):
-        #     if block_num in self.state["blocks"]:
-        #         del self.state["blocks"][block_num]
         pass
 
     def start_chunk(self, block_number, chunk_size):
@@ -96,74 +151,16 @@ class JSONifiedState(EventScannerState):
         reporter_addr = args._reporter
         query_id = "0x" + args._queryId.hex()
 
-        if reporter_addr not in self.state["reporter"]:
-            self.state["reporter"][reporter_addr] = {}
+        if reporter_addr not in self.state:
+            self.state[reporter_addr] = {}
 
-        reporter = self.state["reporter"][reporter_addr]
+        reporter = self.state[reporter_addr]
 
-        if self.date not in reporter:
-            reporter[self.date] = {}
+        if query_id not in reporter:
+            reporter[query_id] = []
 
-        dates = reporter[self.date]
+        queryId = reporter[query_id]
+        
 
-        if query_id not in dates:
-            dates[query_id] = {}
-
-        if "all_submissions" not in dates[query_id]:
-            dates[query_id]["all_submissions"] = []
-
-        dates[query_id]["all_submissions"].append(args._time)
+        queryId.append(args._time)
         return f"{txhash}-{log_index}"
-
-    def filter_timestamps(self, web3: Web3, reporter: ChecksumAddress, query_id: str):
-        # get timestamps from json
-        if reporter in self.state["reporter"]:
-            logger.debug(reporter)
-            submissions_list = self.state["reporter"][reporter][self.date][query_id]["all_submissions"]
-            eligible_timestamps = self.state["reporter"][reporter][self.date][query_id]
-            timestamp_list = _checker_one_time_tip(web3, query_id, submissions_list)
-            logger.debug(timestamp_list)
-            if timestamp_list:
-                if "one_time_tips" not in eligible_timestamps:
-                    eligible_timestamps["one_time_tips"] = timestamp_list
-
-                    return eligible_timestamps
-
-    def get_query_ids(self, reporter: ChecksumAddress) -> List:
-        """get query id from state"""
-        if reporter in self.state["reporter"]:
-            ids = self.state["reporter"][reporter][self.date]
-            logger.debug(ids)
-            return [query_id for query_id in ids]
-
-
-def _checker_one_time_tip(web3: Web3, query_id: str, timestamps: List):
-    """OneTimeTip checker"""
-    with open('abi/autopay.json') as autopay:
-        autopay = json.load(autopay)
-    autopay_address = "0xD789488E5ee48Ef8b0719843672Bc04c213b648c"
-    autopay_contract = web3.eth.contract(address=autopay_address, abi=autopay)
-    eligible_list = []
-    tips_list = autopay_contract.functions.getPastTips(query_id).call()
-    count = len(tips_list)
-    for i in timestamps:
-        if count > 0:
-            mini = 0
-            maxi = count
-            while maxi - mini > 1:
-                mid = int((maxi + mini) / 2)
-                tip_info = tips_list[mid]
-                if tip_info[1] > i:
-                    maxi = mid
-                else:
-                    mini = mid
-            timestamp_before = autopay_contract.functions.getDataBefore(
-                query_id, i).call()
-            tip_info = tips_list[mini]
-            if timestamp_before[2] < tip_info[1]:
-                eligible_list.append(int(tip_info[1]))
-
-    return eligible_list
-
-def _checker_feed_tips():
-    pass
