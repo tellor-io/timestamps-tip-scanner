@@ -1,7 +1,11 @@
-record.json
+report_timestamps.json
+single_tips.json
+feed_tips.json
 *.ipynb
 *.egg-info
 .tox
+*.github
+.pre-commit-config.yml
 
 # Environments
 .env
