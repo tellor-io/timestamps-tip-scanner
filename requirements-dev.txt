@@ -1,4 +1,5 @@
 tqdm
 web3
 python-dotenv
-multicall
+multicall==0.5.1
+black
