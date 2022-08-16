@@ -95,7 +95,7 @@ def run():
 
         # Run the scan
         result, total_chunks_scanned = scanner.scan(
-            start_block, end_block, progress_callback=_update_progress
+            start_block, end_block, progress_callback=_update_progress, start_chunk_size=max_batch_scan_size
         )
 
     state.save()
