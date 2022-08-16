@@ -103,18 +103,23 @@ class JSONifiedState(EventScannerState):
         with open(self.ffeedtips, "wt") as f:
             json.dump(self.feed_tips, f)
 
-    def process_feed_timestamps(self, query_id: str, timestamp: int):
+    def process_feed_timestamps(self, query_id: str, feed_id: str, timestamp: int):
         feed_tips = self.feed_tips["feed_tips"]
         if query_id not in feed_tips:
-            feed_tips[query_id] = []
+            feed_tips[query_id] = {}
+
+        if feed_id not in feed_tips[query_id]:
+            feed_tips[query_id][feed_id] = []
+            feed_tips[query_id][feed_id].append(timestamp)
         else:
-            feed_tips[query_id].append(timestamp)
-            feed_tips[query_id] = [*set(feed_tips[query_id])]
+            feed_tips[query_id][feed_id].append(timestamp)
+            feed_tips[query_id][feed_id] = [*set(feed_tips[query_id][feed_id])]
 
     def process_singletip_timestamps(self, query_id: str, timestamp: int):
         single_tips = self.single_tips["single_tips"]
         if query_id not in single_tips:
             single_tips[query_id] = []
+            single_tips[query_id].append(timestamp)
         else:
             single_tips[query_id].append(timestamp)
             single_tips[query_id] = [*set(single_tips[query_id])]

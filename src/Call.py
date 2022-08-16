@@ -58,7 +58,7 @@ async def main():
                 state.process_singletip_timestamps(query_id, timestamp)
                 state.save_single_tips()
 
-            for (q_id, _), details in feed_details.items():
+            for (q_id, feed_id), details in feed_details.items():
                 detail = FeedDetails(*details)
                 if query_id == q_id:
 
@@ -73,7 +73,7 @@ async def main():
                     if check_timestamp is True:
                         # store
                         state.process_feed_timestamps(
-                            query_id=query_id, timestamp=timestamp
+                            query_id=query_id, feed_id=feed_id.hex(), timestamp=timestamp
                         )
                         state.save_feed_tips()
 

@@ -1,5 +1,6 @@
 import json
 import time
+import os
 
 from tqdm import tqdm
 from web3 import Web3
@@ -45,6 +46,12 @@ def run():
     state = JSONifiedState()
     state.restore()
 
+    try:
+        max_batch_scan_size = int(os.getenv("BATCH_SIZE", 3499))
+    except ValueError:
+        max_batch_scan_size = 3499
+        print(f"Unable to read env variable, using default batch size: {max_batch_scan_size}")
+
     # chain_id: int, web3: Web3, abi: dict, state: EventScannerState, events: List, filters: {}, max_chunk_scan_size: int=10000
     scanner = EventScanner(
         web3=w3,
@@ -54,7 +61,7 @@ def run():
         events=[tellorflex_contract.events.NewReport],
         filters={"address": tellorflex_address},
         # Infura max block ranger
-        max_chunk_scan_size=3499,
+        max_chunk_scan_size=max_batch_scan_size,
     )
 
     # Assume we might have scanned the blocks all the way to the last Ethereum block
