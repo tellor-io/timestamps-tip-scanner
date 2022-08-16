@@ -48,9 +48,10 @@ cd timestamps-tip-scanner
 ```
 touch .env
 vi .env
-NODE_API = https://polygon-mumbai.infura.io/v3/<put_your_api_key_here>
+NODE_URI = https://polygon-mumbai.infura.io/v3/<put_your_api_key_here>
 AUTOPAY_ADDRESS = "0x7B49420008BcA14782F2700547764AdAdD54F813"
 TELLORFLEX_ADDRESS = "0x840c23e39F9D029fFa888F47069aA6864f0401D7"
+REPORTER = <wallet address>
 ```
 ```
 python3 -m venv venv
