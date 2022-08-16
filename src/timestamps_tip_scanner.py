@@ -15,7 +15,7 @@ print(f"env loaded: {load_dotenv()}")
 
 
 def run():
-    reporter = input("reporter address: ")
+    reporter = fallback_input("REPORTER")
     try:
         reporter = to_checksum_address(reporter)
     except ValueError:
@@ -49,7 +49,7 @@ def run():
     scanner = EventScanner(
         web3=w3,
         state=state,
-        reporter=Web3.toChecksumAddress(reporter),
+        reporter=reporter,
         contract=tellorflex_contract,
         events=[tellorflex_contract.events.NewReport],
         filters={"address": tellorflex_address},

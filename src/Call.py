@@ -8,6 +8,7 @@ from jsonified_state import JSONifiedState
 from autopay_calls import AutopayCalls
 from utils import FeedDetails
 from utils import one_time_tips
+from utils import fallback_input
 from utils import is_timestamp_first_in_window
 
 
@@ -26,8 +27,7 @@ async def main():
     state.restore_singletips()
     state.restore_feed_tips()
 
-    print("Type wallet address:")
-    eoa = input()
+    eoa = fallback_input("REPORTER")
     try:
         eoa = to_checksum_address(eoa)
     except ValueError:

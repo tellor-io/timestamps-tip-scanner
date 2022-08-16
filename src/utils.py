@@ -51,7 +51,7 @@ def one_time_tips(tips_lis: tuple, timestamp: int, timestamp_before: int):
             timestamp > tips.timestamp,
             tips.amount > 0,
         )
-        return conditions
+        return all(conditions)
 
 
 def is_timestamp_first_in_window(

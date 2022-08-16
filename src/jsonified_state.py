@@ -109,6 +109,7 @@ class JSONifiedState(EventScannerState):
             feed_tips[query_id] = []
         else:
             feed_tips[query_id].append(timestamp)
+            feed_tips[query_id] = [*set(feed_tips[query_id])]
 
     def process_singletip_timestamps(self, query_id: str, timestamp: int):
         single_tips = self.single_tips["single_tips"]
@@ -116,6 +117,7 @@ class JSONifiedState(EventScannerState):
             single_tips[query_id] = []
         else:
             single_tips[query_id].append(timestamp)
+            single_tips[query_id] = [*set(single_tips[query_id])]
 
     #
     # EventScannerState methods implemented below
@@ -161,4 +163,5 @@ class JSONifiedState(EventScannerState):
         queryId = reporter[query_id]
 
         queryId.append(args._time)
+        queryId = [*set(queryId)]
         return f"{txhash}-{log_index}"
