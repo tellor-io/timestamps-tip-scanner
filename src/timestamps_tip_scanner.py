@@ -3,36 +3,19 @@ import time
 import os
 
 from tqdm import tqdm
-from web3 import Web3
 from dotenv import load_dotenv
-from eth_utils import to_checksum_address
 from event_scanner import EventScanner
 from jsonified_state import JSONifiedState
-from web3.providers.rpc import HTTPProvider
 from utils import fallback_input
+from utils import w3_instance
 
 
 print(f"env loaded: {load_dotenv()}")
 
 
 def run():
-    reporter = fallback_input("REPORTER")
-    try:
-        reporter = to_checksum_address(reporter)
-    except ValueError:
-        print(f"contract address must be a hex string. Got: {reporter}")
 
-    api_url = fallback_input("NODE_URI")
-
-    provider = HTTPProvider(api_url)
-
-    # Remove the default JSON-RPC retry middleware
-    # as it correctly cannot handle eth_getLogs block range
-    # throttle down.
-    provider.middlewares.clear()
-
-    w3 = Web3(provider)
-
+    reporter, w3 = w3_instance()
     # Prepare contract object
     with open("abi/tellorflex.json") as tellorflex_abi:
         tellorflex_abi = json.load(tellorflex_abi)
@@ -50,7 +33,9 @@ def run():
         max_batch_scan_size = int(os.getenv("BATCH_SIZE", 3499))
     except ValueError:
         max_batch_scan_size = 3499
-        print(f"Unable to read env variable, using default batch size: {max_batch_scan_size}")
+        print(
+            f"Unable to read env variable, using default batch size: {max_batch_scan_size}"
+        )
 
     # chain_id: int, web3: Web3, abi: dict, state: EventScannerState, events: List, filters: {}, max_chunk_scan_size: int=10000
     scanner = EventScanner(
@@ -95,7 +80,10 @@ def run():
 
         # Run the scan
         result, total_chunks_scanned = scanner.scan(
-            start_block, end_block, progress_callback=_update_progress, start_chunk_size=max_batch_scan_size
+            start_block,
+            end_block,
+            progress_callback=_update_progress,
+            start_chunk_size=max_batch_scan_size,
         )
 
     state.save()

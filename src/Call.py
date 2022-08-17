@@ -1,15 +1,12 @@
 import os
 import asyncio
 from dotenv import load_dotenv
-from web3 import Web3
-from web3 import HTTPProvider
-from eth_utils import to_checksum_address
 from jsonified_state import JSONifiedState
 from autopay_calls import AutopayCalls
 from utils import FeedDetails
 from utils import one_time_tips
-from utils import fallback_input
 from utils import is_timestamp_first_in_window
+from utils import w3_instance
 
 
 async def main():
@@ -17,22 +14,13 @@ async def main():
 
     autopay_address = os.getenv("AUTOPAY_ADDRESS", None)
     print(f"AUTOPAY_ADDRESS: {autopay_address}")
-    api_url = os.getenv("NODE_URI")
-
-    provider = HTTPProvider(api_url)
-    w3 = Web3(provider)
 
     state = JSONifiedState()
     state.restore()
     state.restore_singletips()
     state.restore_feed_tips()
 
-    eoa = fallback_input("REPORTER")
-    try:
-        eoa = to_checksum_address(eoa)
-    except ValueError:
-        print(f"contract address must be a hex string. Got: {eoa}")
-        return
+    eoa, w3 = w3_instance()
 
     eoa_reported_ids = state.timestampsperEOA(eoa)
 
@@ -73,7 +61,9 @@ async def main():
                     if check_timestamp is True:
                         # store
                         state.process_feed_timestamps(
-                            query_id=query_id, feed_id=feed_id.hex(), timestamp=timestamp
+                            query_id=query_id,
+                            feed_id=feed_id.hex(),
+                            timestamp=timestamp,
                         )
                         state.save_feed_tips()
 

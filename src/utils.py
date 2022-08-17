@@ -1,6 +1,11 @@
 import os
 import math
+import json
+from web3 import HTTPProvider
+from web3 import Web3
 from dataclasses import dataclass
+from web3.contract import Contract
+from eth_utils import to_checksum_address
 
 
 @dataclass
@@ -77,3 +82,59 @@ def is_timestamp_first_in_window(
         timestamp_before < current_window_start,
     ]
     return all(eligible)
+
+
+def evm_transaction(
+    contract_factory: Contract,
+    func_name: str,
+    w3: Web3,
+    wallet_address: str,
+    private_key: str,
+    **kwargs,
+):
+    gas = int(os.getenv("GAS", 400000))
+    gas_multiplier = int(os.getenv("GAS_MULTIPLIER", 2))
+
+    wallet_nonce = w3.eth.get_transaction_count(wallet_address)
+    txn_build = contract_factory.get_function_by_name(func_name)(
+        **kwargs
+    ).buildTransaction(
+        dict(
+            nonce=int(wallet_nonce),
+            gasPrice=int(w3.eth.gas_price * gas_multiplier),
+            gas=gas,
+        )
+    )
+    signed_txn = w3.eth.account.signTransaction(txn_build, private_key)
+    # Send the transaction
+    transaction_hash = w3.eth.sendRawTransaction(signed_txn.rawTransaction)
+    transaction_hash = transaction_hash.hex()
+    print(f"{func_name} txn: {transaction_hash}")
+    receipt = w3.eth.wait_for_transaction_receipt(transaction_hash, timeout=480)
+    return receipt
+
+
+def autopay_factory(address: str, w3: Web3):
+    with open("abi/autopay.json") as f:
+        autopay_abi = json.load(f)
+
+    return w3.eth.contract(address=address, abi=autopay_abi)
+
+
+def w3_instance():
+    reporter = fallback_input("REPORTER")
+    try:
+        reporter = to_checksum_address(reporter)
+    except ValueError:
+        print(f"contract address must be a hex string. Got: {reporter}")
+
+    api_url = fallback_input("NODE_URI")
+
+    provider = HTTPProvider(api_url)
+
+    # Remove the default JSON-RPC retry middleware
+    # as it correctly cannot handle eth_getLogs block range
+    # throttle down.
+    provider.middlewares.clear()
+
+    return reporter, Web3(provider)
