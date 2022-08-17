@@ -24,9 +24,9 @@ class ClaimTips:
         self.pk = fallback_input("PRIVATE_KEY")
         self.autopay_address = fallback_input("AUTOPAY_ADDRESS")
         self.contract = autopay_factory(self.autopay_address, self.w3)
-        print("Enter query id (hex string):")
+        print("Enter query id (example: 0x40aa71e5205fdc7bdb7d65f7ae41daca3820c5d3a8f62357a99eda3aa27244a3):")
         self.query_id = input()
-        print("Enter list of timestamps")
+        print("Enter list of timestamps (example: [1660320062]):")
         self.timestamps = input()
         self.timestamps = list(ast.literal_eval(self.timestamps))
 
@@ -42,7 +42,7 @@ class ClaimTips:
         )
 
     def claim_feed_tips(self):
-        print("Enter feed id:")
+        print("Enter feed id (example: 0x7758ba9b140c3b91500e0a61f383147cd01e4a548be6ecb357f355f279271881):")
         feed_id = input()
         return evm_transaction(
             contract_factory=self.contract,

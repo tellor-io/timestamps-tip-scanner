@@ -71,6 +71,7 @@ AUTOPAY_ADDRESS = "0x7B49420008BcA14782F2700547764AdAdD54F813"
 TELLORFLEX_ADDRESS = "0x840c23e39F9D029fFa888F47069aA6864f0401D7"
 REPORTER = <wallet address>
 BATCH_SIZE = <scan batch size number>
+PRIVATE_KEY = <required to claim tips>
 ```
 ```
 python3 -m venv venv
@@ -85,7 +86,11 @@ python src/timestamps_tip_scanner.py
 ```
 Then to filter tip eligible ones, run:
 ```
-python src/Call.py
+python src/call.py
+```
+To claim tips
+```
+python src/claim_tips.py
 ```
 
 - to start at a certain block edit report_timestamps.json with the block you want to start with
