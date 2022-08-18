@@ -114,6 +114,18 @@ class JSONifiedState(EventScannerState):
         else:
             feed_tips[query_id][feed_id].append(timestamp)
             feed_tips[query_id][feed_id] = [*set(feed_tips[query_id][feed_id])]
+    
+    def process_feed_timestamps_zero_balance(self, query_id: str, feed_id: str, timestamp: int):
+        feed_tips = self.feed_tips["feed_tips_no_balance"]
+        if query_id not in feed_tips:
+            feed_tips[query_id] = {}
+
+        if feed_id not in feed_tips[query_id]:
+            feed_tips[query_id][feed_id] = []
+            feed_tips[query_id][feed_id].append(timestamp)
+        else:
+            feed_tips[query_id][feed_id].append(timestamp)
+            feed_tips[query_id][feed_id] = [*set(feed_tips[query_id][feed_id])]
 
     def process_singletip_timestamps(self, query_id: str, timestamp: int):
         single_tips = self.single_tips["single_tips"]

@@ -60,11 +60,18 @@ async def main():
                     )
                     if check_timestamp is True:
                         # store
-                        state.process_feed_timestamps(
-                            query_id=query_id,
-                            feed_id=feed_id.hex(),
-                            timestamp=timestamp,
-                        )
+                        if detail.balance == 0:
+                            state.process_feed_timestamps_zero_balance(
+                                query_id=query_id,
+                                feed_id=feed_id.hex(),
+                                timestamp=timestamp,
+                            )
+                        else:
+                            state.process_feed_timestamps(
+                                query_id=query_id,
+                                feed_id=feed_id.hex(),
+                                timestamp=timestamp,
+                            )
                         state.save_feed_tips()
 
 
