@@ -1,15 +1,16 @@
 import os
 import asyncio
 from dotenv import load_dotenv
-from jsonified_state import JSONifiedState
-from autopay_calls import AutopayCalls
-from utils import FeedDetails
-from utils import one_time_tips
-from utils import is_timestamp_first_in_window
-from utils import w3_instance
+from src.jsonified_state import JSONifiedState
+from src.autopay_calls import AutopayCalls
+from src.utils import FeedDetails
+from src.utils import one_time_tips
+from src.utils import is_timestamp_first_in_window
+from src.utils import w3_instance
 
+Networks = {"mumbai": os.getenv("MUMBAI_NODE")}
 
-async def main():
+async def main(network, eoa):
     print(f"env loaded: {load_dotenv()}")
 
     autopay_address = os.getenv("AUTOPAY_ADDRESS", None)
@@ -17,12 +18,15 @@ async def main():
 
     state = JSONifiedState()
     state.restore()
-    state.restore_singletips()
-    state.restore_feed_tips()
+    state.reset_singletips()
+    state.reset_feedtips()
 
-    eoa, w3 = w3_instance()
+    api_url = Networks[network]
+    w3 = w3_instance(api_url)
 
     eoa_reported_ids = state.timestampsperEOA(eoa)
+    if not eoa_reported_ids:
+        return None
 
     fetch_feed_ids = AutopayCalls(eoa_reported_ids, w3, autopay_address)
 
@@ -73,7 +77,7 @@ async def main():
                                 timestamp=timestamp,
                             )
                         state.save_feed_tips()
-
+    return state
 
 if __name__ == "__main__":
     asyncio.run(main())

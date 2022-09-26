@@ -45,80 +45,93 @@ class AutopayCalls:
     # {"last_scanned_block": {EOA: {"query_id": [timestamps]}}
     async def get_feed_ids(self):
         """Returns feed ids for every query id"""
-        calls = [
-            Call(
-                self.autopay_address,
-                ["getCurrentFeeds(bytes32)(bytes32[])", bytes.fromhex(query_id[2:])],
-                [[query_id, None]],
-            )
-            for query_id in self.query_ids
-        ]
-        multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)
-        data = await multi_call.coroutine()
+        if self.query_ids:
+            calls = [
+                Call(
+                    self.autopay_address,
+                    ["getCurrentFeeds(bytes32)(bytes32[])", bytes.fromhex(query_id[2:])],
+                    [[query_id, None]],
+                )
 
-        return data
+                for query_id in self.query_ids
+                
+            ]
+            multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)
+            data = await multi_call.coroutine()
+
+            return data
+        else:
+            return None
 
     async def get_feed_details(self) -> Any:
         """Returns feed details for all feed Ids"""
         # store them like this {(query_id, feed_id): details}
         feed_ids: dict = await self.get_feed_ids()
-        calls = [
-            Call(
-                self.autopay_address,
-                [
-                    "getDataFeed(bytes32)((uint256,uint256,uint256,uint256,uint256,uint256,uint256))",
-                    feed_id,
-                ],
-                [[(query_id, feed_id), None]],
-            )
-            for query_id, feeds in feed_ids.items()
-            for feed_id in feeds
-            if len(feeds) > 0
-        ]
-        multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)
-        data = await multi_call.coroutine()
-        return data
+        if feed_ids:
+            calls = [
+                Call(
+                    self.autopay_address,
+                    [
+                        "getDataFeed(bytes32)((uint256,uint256,uint256,uint256,uint256,uint256,uint256))",
+                        feed_id,
+                    ],
+                    [[(query_id, feed_id), None]],
+                )
+                for query_id, feeds in feed_ids.items()
+                for feed_id in feeds
+                if len(feeds) > 0
+            ]
+            multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)
+            data = await multi_call.coroutine()
+            return data
+        else:
+            return None
 
     async def get_timestamps_before(self) -> Any:
         """Get timestamps before"""
-        calls = [
-            Call(
-                self.autopay_address,
-                [
-                    "getDataBefore(bytes32,uint256)(bool,bytes,uint256)",
-                    bytes.fromhex(query_id[2:]),
-                    timestamp,
-                ],
-                [
-                    ["disregard", None],
-                    ["disregard", None],
-                    [(query_id, timestamp), None],
-                ],
-            )
-            for query_id, timestamps in self.query_ids.items()
-            for timestamp in timestamps
-        ]
-        multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)
-        data = await multi_call.coroutine()
-        data.pop("disregard")
-        return data
+        if self.query_ids:
+            calls = [
+                Call(
+                    self.autopay_address,
+                    [
+                        "getDataBefore(bytes32,uint256)(bool,bytes,uint256)",
+                        bytes.fromhex(query_id[2:]),
+                        timestamp,
+                    ],
+                    [
+                        ["disregard", None],
+                        ["disregard", None],
+                        [(query_id, timestamp), None],
+                    ],
+                )
+                for query_id, timestamps in self.query_ids.items()
+                for timestamp in timestamps
+            ]
+            multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)
+            data = await multi_call.coroutine()
+            data.pop("disregard")
+            return data
+        else:
+            return None
 
     async def get_past_tips(self) -> Any:
         """get past tips from autopay"""
-        calls = [
-            Call(
-                self.autopay_address,
-                [
-                    "getPastTips(bytes32)((uint256,uint256)[])",
-                    bytes.fromhex(query_id[2:]),
-                ],
-                [[query_id, None]],
-            )
-            for query_id in self.query_ids
-        ]
-        multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)
-        data = await multi_call.coroutine()
-        return data
+        if self.query_ids:
+            calls = [
+                Call(
+                    self.autopay_address,
+                    [
+                        "getPastTips(bytes32)((uint256,uint256)[])",
+                        bytes.fromhex(query_id[2:]),
+                    ],
+                    [[query_id, None]],
+                )
+                for query_id in self.query_ids
+            ]
+            multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)
+            data = await multi_call.coroutine()
+            return data
+        return None
 
     async def get_reward_claimed_status(self, timestamps: list) -> Any:
         """check if a reported timestamp has already claimed"""
