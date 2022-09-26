@@ -1,14 +1,10 @@
-from typing import List, Optional
-from event_scanner_state import EventScannerState
-import datetime
 import json
 import time
-from web3.datastructures import AttributeDict
-from eth_typing.evm import ChecksumAddress
-from web3 import Web3
-import logging
+import datetime
+from typing import Optional
+from event_scanner_state import EventScannerState
 
-logger = logging.getLogger(__name__)
+from web3.datastructures import AttributeDict
 
 
 class JSONifiedState(EventScannerState):
@@ -74,7 +70,7 @@ class JSONifiedState(EventScannerState):
     def reset_singletips(self):
         self.single_tips = {"single_tips": {}}
 
-    def timestampsperEOA(self, EOA: str) -> Optional[List[int]]:
+    def timestampsperEOA(self, EOA: str) -> Optional[list[int]]:
         try:
             return self.state[f"{EOA}"]
         except KeyError:
