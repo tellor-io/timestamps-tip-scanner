@@ -11,11 +11,13 @@ from utils import w3_instance
 
 
 print(f"env loaded: {load_dotenv()}")
+Networks = {"mumbai": os.getenv("MUMBAI_NODE")}
 
+def run(network, reporter=None, starting_block=None):
 
-def run():
+    api_url = Networks[network]
 
-    reporter, w3 = w3_instance()
+    w3 = w3_instance(api_url)
     # Prepare contract object
     with open("abi/tellorflex.json") as tellorflex_abi:
         tellorflex_abi = json.load(tellorflex_abi)
@@ -27,7 +29,7 @@ def run():
 
     # Restore/create our persistent state
     state = JSONifiedState()
-    state.restore()
+    state.reset(starting_block)
 
     try:
         max_batch_scan_size = int(os.getenv("BATCH_SIZE", 3499))
@@ -61,7 +63,8 @@ def run():
 
     # Scan from [last block scanned] - [latest ethereum block]
     # Note that our chain reorg safety blocks cannot go negative
-    start_block = max(state.get_last_scanned_block() - chain_reorg_safety_blocks, 0)
+
+    start_block = state.get_last_scanned_block()
     end_block = scanner.get_suggested_scan_end_block()
 
     blocks_to_scan = end_block - start_block
@@ -92,5 +95,5 @@ def run():
         f"Scanned total {len(result)} TellorFlex NewReport events, in {duration} seconds, total {total_chunks_scanned} chunk scans performed"
     )
 
+    return state
 
-run()

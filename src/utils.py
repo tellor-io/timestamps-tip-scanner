@@ -121,20 +121,13 @@ def autopay_factory(address: str, w3: Web3):
     return w3.eth.contract(address=address, abi=autopay_abi)
 
 
-def w3_instance():
-    reporter = fallback_input("REPORTER")
-    try:
-        reporter = to_checksum_address(reporter)
-    except ValueError:
-        print(f"contract address must be a hex string. Got: {reporter}")
+def w3_instance(node_url):
 
-    api_url = fallback_input("NODE_URI")
-
-    provider = HTTPProvider(api_url)
+    provider = HTTPProvider(node_url)
 
     # Remove the default JSON-RPC retry middleware
     # as it correctly cannot handle eth_getLogs block range
     # throttle down.
     provider.middlewares.clear()
 
-    return reporter, Web3(provider)
+    return Web3(provider)

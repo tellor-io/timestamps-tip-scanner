@@ -21,6 +21,7 @@ class JSONifiedState(EventScannerState):
     def __init__(self):
         self.state = None
         self.eligible = None
+        self.single_tips = None
         self.freports = "report_timestamps.json"
         self.fsingletips = "single_tips.json"
         self.ffeedtips = "feed_tips.json"
@@ -28,21 +29,23 @@ class JSONifiedState(EventScannerState):
         self.last_save = 0
         self.date = datetime.datetime.today().strftime("%b-%d-%Y")
 
-    def reset(self):
+    def reset(self, zero_block):
         """Create initial state of nothing scanned."""
-        import requests
+        if zero_block is None:
+            import requests
 
-        start_timestamp = int(
-            datetime.datetime.today()
-            .replace(hour=00, minute=00, second=0, microsecond=0)
-            .timestamp()
-        )
-        print(start_timestamp)
-        url = f"https://api-testnet.polygonscan.com/api?module=block&action=getblocknobytime&timestamp={start_timestamp}&closest=before"
-        res = requests.get(url)
-        result = res.json()
-        zero_block = int(result["result"])
-        print(f"{zero_block}, zero_block")
+            start_timestamp = int(
+                datetime.datetime.today()
+                .replace(hour=00, minute=00, second=0, microsecond=0)
+                .timestamp()
+            )
+            print(start_timestamp)
+            url = f"https://api-testnet.polygonscan.com/api?module=block&action=getblocknobytime&timestamp={start_timestamp}&closest=before"
+            res = requests.get(url)
+            result = res.json()
+            zero_block = int(result["result"])
+            print(f"{zero_block}, zero_block")
+        print(f"State starting from {zero_block}")
         self.state = {
             "last_scanned_block": int(zero_block),
         }
@@ -70,23 +73,6 @@ class JSONifiedState(EventScannerState):
 
     def reset_singletips(self):
         self.single_tips = {"single_tips": {}}
-
-    def restore_feed_tips(self):
-        """Restore the last scan state from a file."""
-        try:
-            self.feed_tips = json.load(open(self.ffeedtips, "rt"))
-            print(f"Feed-tips file restored")
-        except (IOError, json.decoder.JSONDecodeError):
-            print("Feed-tips file starting from scratch")
-            self.reset_feedtips()
-
-    def restore_singletips(self):
-        try:
-            self.single_tips = json.load(open(self.fsingletips, "rt"))
-            print(f"Single-tips file restored")
-        except (IOError, json.decoder.JSONDecodeError):
-            print("Single-tips file starting from scratch")
-            self.reset_singletips()
 
     def timestampsperEOA(self, EOA: str) -> Optional[List[int]]:
         try:
