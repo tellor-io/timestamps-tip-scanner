@@ -51,6 +51,8 @@ def one_time_tips(tips_lis: tuple, timestamp: int, timestamp_before: int):
             else:
                 mini = mid
         tips = Tip(*tips_lis[mini])
+        if timestamp_before is None:
+            return True
         conditions = (
             timestamp_before < tips.timestamp,
             timestamp > tips.timestamp,
@@ -77,6 +79,8 @@ def is_timestamp_first_in_window(
     )
     # Start time of latest submission window
     current_window_start = feed_start_timestamp + (feed_interval * num_intervals)
+    if timestamp_before is None:
+        timestamp_before = 0
     eligible = [
         (timestamp_to_check - current_window_start) < feed_window,
         timestamp_before < current_window_start,
