@@ -15,6 +15,7 @@ def run(network, reporter=None, starting_block=None):
 
     api_url = Networks[network].api_node
     tellorflex_address = Networks[network].oracle_address
+    print(f"Tellorflex address: {tellorflex_address}")
 
     w3 = w3_instance(api_url)
     # Prepare contract object
