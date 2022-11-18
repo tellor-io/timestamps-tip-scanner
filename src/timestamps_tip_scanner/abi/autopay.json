@@ -8,12 +8,7 @@
             },
             {
                 "internalType": "address",
-                "name": "_token",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "_owner",
+                "name": "_queryDataStorage",
                 "type": "address"
             },
             {
@@ -29,19 +24,19 @@
         "anonymous": false,
         "inputs": [
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "bytes32",
                 "name": "_queryId",
                 "type": "bytes32"
             },
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "bytes32",
                 "name": "_feedId",
                 "type": "bytes32"
             },
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "uint256",
                 "name": "_amount",
                 "type": "uint256"
@@ -51,6 +46,54 @@
                 "internalType": "address",
                 "name": "_feedFunder",
                 "type": "address"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "reward",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "balance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "startTime",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "interval",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "window",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "priceThreshold",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "rewardIncreasePerSecond",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "feedsWithFundingIndex",
+                        "type": "uint256"
+                    }
+                ],
+                "indexed": false,
+                "internalType": "struct Autopay.FeedDetails",
+                "name": "_feedDetails",
+                "type": "tuple"
             }
         ],
         "name": "DataFeedFunded",
@@ -60,13 +103,13 @@
         "anonymous": false,
         "inputs": [
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "bytes32",
                 "name": "_queryId",
                 "type": "bytes32"
             },
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "bytes32",
                 "name": "_feedId",
                 "type": "bytes32"
@@ -91,19 +134,19 @@
         "anonymous": false,
         "inputs": [
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "bytes32",
                 "name": "_queryId",
                 "type": "bytes32"
             },
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "uint256",
                 "name": "_amount",
                 "type": "uint256"
             },
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "address",
                 "name": "_reporter",
                 "type": "address"
@@ -116,13 +159,13 @@
         "anonymous": false,
         "inputs": [
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "bytes32",
                 "name": "_queryId",
                 "type": "bytes32"
             },
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "uint256",
                 "name": "_amount",
                 "type": "uint256"
@@ -147,19 +190,19 @@
         "anonymous": false,
         "inputs": [
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "bytes32",
                 "name": "_feedId",
                 "type": "bytes32"
             },
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "bytes32",
                 "name": "_queryId",
                 "type": "bytes32"
             },
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "uint256",
                 "name": "_amount",
                 "type": "uint256"
@@ -314,15 +357,15 @@
                 "internalType": "bytes32",
                 "name": "_queryId",
                 "type": "bytes32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_timestamp",
+                "type": "uint256"
             }
         ],
-        "name": "getCurrentValue",
+        "name": "getDataAfter",
         "outputs": [
-            {
-                "internalType": "bool",
-                "name": "_ifRetrieve",
-                "type": "bool"
-            },
             {
                 "internalType": "bytes",
                 "name": "_value",
@@ -352,11 +395,6 @@
         ],
         "name": "getDataBefore",
         "outputs": [
-            {
-                "internalType": "bool",
-                "name": "_ifRetrieve",
-                "type": "bool"
-            },
             {
                 "internalType": "bytes",
                 "name": "_value",
@@ -415,6 +453,11 @@
                     },
                     {
                         "internalType": "uint256",
+                        "name": "rewardIncreasePerSecond",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
                         "name": "feedsWithFundingIndex",
                         "type": "uint256"
                     }
@@ -422,6 +465,73 @@
                 "internalType": "struct Autopay.FeedDetails",
                 "name": "",
                 "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getFundedFeedDetails",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "components": [
+                            {
+                                "internalType": "uint256",
+                                "name": "reward",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "balance",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "startTime",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "interval",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "window",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "priceThreshold",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "rewardIncreasePerSecond",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "feedsWithFundingIndex",
+                                "type": "uint256"
+                            }
+                        ],
+                        "internalType": "struct Autopay.FeedDetails",
+                        "name": "details",
+                        "type": "tuple"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "queryData",
+                        "type": "bytes"
+                    }
+                ],
+                "internalType": "struct Autopay.FeedDetailsWithQueryData[]",
+                "name": "",
+                "type": "tuple[]"
             }
         ],
         "stateMutability": "view",
@@ -454,6 +564,60 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "getFundedSingleTipsInfo",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "bytes",
+                        "name": "queryData",
+                        "type": "bytes"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "tip",
+                        "type": "uint256"
+                    }
+                ],
+                "internalType": "struct Autopay.SingleTipsWithQueryData[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_queryId",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_timestamp",
+                "type": "uint256"
+            }
+        ],
+        "name": "getIndexForDataAfter",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "_found",
+                "type": "bool"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_index",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "bytes32",
@@ -477,6 +641,45 @@
                 "internalType": "uint256",
                 "name": "_index",
                 "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_queryId",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_timestamp",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_maxAge",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_maxCount",
+                "type": "uint256"
+            }
+        ],
+        "name": "getMultipleValuesBefore",
+        "outputs": [
+            {
+                "internalType": "bytes[]",
+                "name": "_values",
+                "type": "bytes[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "_timestamps",
+                "type": "uint256[]"
             }
         ],
         "stateMutability": "view",
@@ -526,6 +729,11 @@
                     {
                         "internalType": "uint256",
                         "name": "timestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "cumulativeTips",
                         "type": "uint256"
                     }
                 ],
@@ -577,6 +785,11 @@
                         "internalType": "uint256",
                         "name": "timestamp",
                         "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "cumulativeTips",
+                        "type": "uint256"
                     }
                 ],
                 "internalType": "struct Autopay.Tip[]",
@@ -601,6 +814,88 @@
                 "internalType": "bytes32",
                 "name": "",
                 "type": "bytes32"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_queryId",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_timestamp",
+                "type": "uint256"
+            }
+        ],
+        "name": "getReporterByTimestamp",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_feedId",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "_queryId",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "_timestamps",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "getRewardAmount",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "_cumulativeReward",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_feedId",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "_queryId",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "_timestamp",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "getRewardClaimStatusList",
+        "outputs": [
+            {
+                "internalType": "bool[]",
+                "name": "",
+                "type": "bool[]"
             }
         ],
         "stateMutability": "view",
@@ -662,6 +957,38 @@
     {
         "inputs": [
             {
+                "internalType": "address",
+                "name": "_user",
+                "type": "address"
+            }
+        ],
+        "name": "getTipsByAddress",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "idMappingContract",
+        "outputs": [
+            {
+                "internalType": "contract IMappingContract",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "bytes32",
                 "name": "_queryId",
                 "type": "bytes32"
@@ -685,23 +1012,10 @@
     },
     {
         "inputs": [],
-        "name": "master",
+        "name": "queryDataStorage",
         "outputs": [
             {
-                "internalType": "contract ITellor",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "owner",
-        "outputs": [
-            {
-                "internalType": "address",
+                "internalType": "contract IQueryDataStorage",
                 "name": "",
                 "type": "address"
             }
@@ -793,6 +1107,19 @@
     {
         "inputs": [
             {
+                "internalType": "address",
+                "name": "_addy",
+                "type": "address"
+            }
+        ],
+        "name": "setIdMappingContract",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "bytes32",
                 "name": "_queryId",
                 "type": "bytes32"
@@ -823,13 +1150,29 @@
                 "type": "uint256"
             },
             {
+                "internalType": "uint256",
+                "name": "_rewardIncreasePerSecond",
+                "type": "uint256"
+            },
+            {
                 "internalType": "bytes",
                 "name": "_queryData",
                 "type": "bytes"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_amount",
+                "type": "uint256"
             }
         ],
         "name": "setupDataFeed",
-        "outputs": [],
+        "outputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_feedId",
+                "type": "bytes32"
+            }
+        ],
         "stateMutability": "nonpayable",
         "type": "function"
     },
@@ -893,6 +1236,11 @@
                 "internalType": "uint256",
                 "name": "timestamp",
                 "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "cumulativeTips",
+                "type": "uint256"
             }
         ],
         "stateMutability": "view",
@@ -906,6 +1254,54 @@
                 "internalType": "contract IERC20",
                 "name": "",
                 "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "userTipsTotal",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_id",
+                "type": "bytes32"
+            }
+        ],
+        "name": "valueFor",
+        "outputs": [
+            {
+                "internalType": "int256",
+                "name": "_value",
+                "type": "int256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_timestamp",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_statusCode",
+                "type": "uint256"
             }
         ],
         "stateMutability": "view",
