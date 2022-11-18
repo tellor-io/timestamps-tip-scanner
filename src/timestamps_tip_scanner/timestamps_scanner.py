@@ -3,37 +3,34 @@ import time
 import os
 
 from tqdm import tqdm
-from dotenv import load_dotenv
 from timestamps_tip_scanner.event_scanner import EventScanner
 from timestamps_tip_scanner.jsonified_state import JSONifiedState
-from timestamps_tip_scanner.utils import fallback_input
 from timestamps_tip_scanner.utils import w3_instance
+from timestamps_tip_scanner.constants import Networks
 from pathlib import Path
 
 
-print(f"env loaded: {load_dotenv()}")
-Networks = {"mumbai": os.getenv("MUMBAI_NODE")}
 
 def run(network, reporter=None, starting_block=None):
 
-    api_url = Networks[network]
+    api_url = Networks[network].api_node
+    tellorflex_address = Networks[network].oracle_address
 
     w3 = w3_instance(api_url)
     # Prepare contract object
     # Read contract ABIs from json files
     _abi_folder = Path(__file__).resolve().parent / "abi"
-    print(_abi_folder)
+
     with open(f"{_abi_folder}/tellorflex.json") as tellorflex_abi:
         tellorflex_abi = json.load(tellorflex_abi)
 
-    tellorflex_address = fallback_input("TELLOR_FLEX_ADDRESS")
     tellorflex_contract = w3.eth.contract(
         address=tellorflex_address, abi=tellorflex_abi
     )
 
     # Restore/create our persistent state
     state = JSONifiedState()
-    state.reset(starting_block)
+    state.reset(network,starting_block)
 
     try:
         max_batch_scan_size = int(os.getenv("BATCH_SIZE", 3499))

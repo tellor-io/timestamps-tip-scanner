@@ -1,27 +1,23 @@
-import os
 import asyncio
-from dotenv import load_dotenv
 from timestamps_tip_scanner.jsonified_state import JSONifiedState
 from timestamps_tip_scanner.autopay_calls import AutopayCalls
 from timestamps_tip_scanner.utils import FeedDetails
 from timestamps_tip_scanner.utils import one_time_tips
 from timestamps_tip_scanner.utils import is_timestamp_first_in_window
 from timestamps_tip_scanner.utils import w3_instance
+from timestamps_tip_scanner.constants import Networks
 
-Networks = {"mumbai": os.getenv("MUMBAI_NODE")}
 
 async def call(network, eoa):
-    print(f"env loaded: {load_dotenv()}")
-
-    autopay_address = os.getenv("AUTOPAY_ADDRESS", None)
-    print(f"AUTOPAY_ADDRESS: {autopay_address}")
+    autopay_address = Networks[network].autopay_address
+    print(f"Autopay address: {autopay_address}")
 
     state = JSONifiedState()
     state.restore()
     state.reset_singletips()
     state.reset_feedtips()
 
-    api_url = Networks[network]
+    api_url = Networks[network].api_node
     w3 = w3_instance(api_url)
 
     eoa_reported_ids = state.timestampsperEOA(eoa)

@@ -1,9 +1,7 @@
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from eth_typing.evm import ChecksumAddress
 
 from web3 import Web3
-from multicall import multicall, Multicall, Call
+from multicall import Multicall, Call
 from multicall.constants import Network, MULTICALL2_ADDRESSES, MULTICALL_ADDRESSES
 from typing import Any, Dict
 
@@ -16,22 +14,6 @@ Network.ArbitrumRinkeby = 421611
 MULTICALL_ADDRESSES[Network.ArbitrumRinkeby] = MULTICALL2_ADDRESSES[
     Network.ArbitrumRinkeby
 ] = "0xf609687230a65E8bd14caceDEfCF2dea9c15b242"
-Network.OptimismKovan = 69
-MULTICALL_ADDRESSES[Network.OptimismKovan] = MULTICALL2_ADDRESSES[
-    Network.OptimismKovan
-] = "0xf609687230a65E8bd14caceDEfCF2dea9c15b242"
-
-
-async def run_in_subprocess(coro: Any, *args: Any, **kwargs: Any) -> Any:
-    """Use ThreadPoolExecutor to execute tasks"""
-    return await asyncio.get_event_loop().run_in_executor(
-        ThreadPoolExecutor(16), coro, *args, **kwargs
-    )
-
-
-# Multicall interface uses ProcessPoolExecutor which leaks memory and breaks when used for the tip listener
-# switching to use ThreadPoolExecutor instead seems to fix that
-multicall.run_in_subprocess = run_in_subprocess
 
 
 class AutopayCalls:

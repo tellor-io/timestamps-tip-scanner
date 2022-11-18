@@ -2,6 +2,7 @@ import json
 import time
 import datetime
 from typing import Optional
+from timestamps_tip_scanner.constants import Networks
 from timestamps_tip_scanner.event_scanner_state import EventScannerState
 
 from web3.datastructures import AttributeDict
@@ -25,23 +26,16 @@ class JSONifiedState(EventScannerState):
         self.last_save = 0
         self.date = datetime.datetime.today().strftime("%b-%d-%Y")
 
-    def reset(self, zero_block):
+    def reset(self, network, zero_block=None):
         """Create initial state of nothing scanned."""
         if zero_block is None:
             import requests
-
-            start_timestamp = int(
-                datetime.datetime.today()
-                .replace(hour=00, minute=00, second=0, microsecond=0)
-                .timestamp()
-            )
-            print(start_timestamp)
-            url = f"https://api-testnet.polygonscan.com/api?module=block&action=getblocknobytime&timestamp={start_timestamp}&closest=before"
-            res = requests.get(url)
+            res = requests.get(Networks[network].api_scan)
             result = res.json()
             zero_block = int(result["result"])
-            print(f"{zero_block}, zero_block")
-        print(f"State starting from {zero_block}")
+            print(f"Starting block was not selected so starting from: {zero_block}")
+        else:
+            print(f"Scan starting from block: {zero_block}")
         self.state = {
             "last_scanned_block": int(zero_block),
         }
