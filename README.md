@@ -16,7 +16,7 @@ pip install -r requirements.txt
 ```
 To fetch timestamps, run:
 ```c
-python timestamps_tip_scanner/run.py mumbai <wallet>
+python src/timestamps_tip_scanner/run.py mumbai <wallet>
 ```
 To start at a certain block use the optional flag ```--start-block <num>```
 
