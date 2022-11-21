@@ -13,6 +13,7 @@ echo "MUMBAI_NODE = https://polygon-mumbai.g.alchemy.com/v2/<put_your_api_key_he
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+pip install -e .
 ```
 To fetch timestamps, run:
 ```c
