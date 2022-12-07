@@ -5,7 +5,6 @@ from web3 import HTTPProvider
 from web3 import Web3
 from dataclasses import dataclass
 from web3.contract import Contract
-from eth_utils import to_checksum_address
 
 
 @dataclass
@@ -18,6 +17,7 @@ class FeedDetails:
     interval: int
     window: int
     priceThreshold: int
+    rewardIncreasePerSecond: int
     feedsWithFundingIndex: int
 
 
@@ -51,6 +51,8 @@ def one_time_tips(tips_lis: tuple, timestamp: int, timestamp_before: int):
             else:
                 mini = mid
         tips = Tip(*tips_lis[mini])
+        if timestamp_before is None:
+            return True
         conditions = (
             timestamp_before < tips.timestamp,
             timestamp > tips.timestamp,
@@ -77,6 +79,8 @@ def is_timestamp_first_in_window(
     )
     # Start time of latest submission window
     current_window_start = feed_start_timestamp + (feed_interval * num_intervals)
+    if timestamp_before is None:
+        timestamp_before = 0
     eligible = [
         (timestamp_to_check - current_window_start) < feed_window,
         timestamp_before < current_window_start,
@@ -121,20 +125,13 @@ def autopay_factory(address: str, w3: Web3):
     return w3.eth.contract(address=address, abi=autopay_abi)
 
 
-def w3_instance():
-    reporter = fallback_input("REPORTER")
-    try:
-        reporter = to_checksum_address(reporter)
-    except ValueError:
-        print(f"contract address must be a hex string. Got: {reporter}")
+def w3_instance(node_url):
 
-    api_url = fallback_input("NODE_URI")
-
-    provider = HTTPProvider(api_url)
+    provider = HTTPProvider(node_url)
 
     # Remove the default JSON-RPC retry middleware
     # as it correctly cannot handle eth_getLogs block range
     # throttle down.
     provider.middlewares.clear()
 
-    return reporter, Web3(provider)
+    return Web3(provider)

@@ -1,9 +1,9 @@
 import os
 import ast
-from utils import fallback_input
-from utils import autopay_factory
-from utils import evm_transaction
-from utils import w3_instance
+from timestamps_tip_scanner.utils import fallback_input
+from timestamps_tip_scanner.utils import autopay_factory
+from timestamps_tip_scanner.utils import evm_transaction
+from timestamps_tip_scanner.utils import w3_instance
 from dotenv import load_dotenv
 from dataclasses import dataclass
 

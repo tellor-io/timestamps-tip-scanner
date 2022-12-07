@@ -5,7 +5,7 @@ import datetime
 
 from web3 import Web3
 from web3.contract import Contract
-from event_scanner_state import EventScannerState
+from timestamps_tip_scanner.event_scanner_state import EventScannerState
 from typing import List, Dict, Tuple, Optional, Callable, Iterable
 
 from eth_abi.codec import ABICodec

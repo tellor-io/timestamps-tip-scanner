@@ -1,14 +1,11 @@
-from typing import List, Optional
-from event_scanner_state import EventScannerState
-import datetime
 import json
 import time
-from web3.datastructures import AttributeDict
-from eth_typing.evm import ChecksumAddress
-from web3 import Web3
-import logging
+import datetime
+from typing import Optional
+from timestamps_tip_scanner.constants import Networks
+from timestamps_tip_scanner.event_scanner_state import EventScannerState
 
-logger = logging.getLogger(__name__)
+from web3.datastructures import AttributeDict
 
 
 class JSONifiedState(EventScannerState):
@@ -21,6 +18,7 @@ class JSONifiedState(EventScannerState):
     def __init__(self):
         self.state = None
         self.eligible = None
+        self.single_tips = None
         self.freports = "report_timestamps.json"
         self.fsingletips = "single_tips.json"
         self.ffeedtips = "feed_tips.json"
@@ -28,21 +26,16 @@ class JSONifiedState(EventScannerState):
         self.last_save = 0
         self.date = datetime.datetime.today().strftime("%b-%d-%Y")
 
-    def reset(self):
+    def reset(self, network, zero_block=None):
         """Create initial state of nothing scanned."""
-        import requests
-
-        start_timestamp = int(
-            datetime.datetime.today()
-            .replace(hour=00, minute=00, second=0, microsecond=0)
-            .timestamp()
-        )
-        print(start_timestamp)
-        url = f"https://api-testnet.polygonscan.com/api?module=block&action=getblocknobytime&timestamp={start_timestamp}&closest=before"
-        res = requests.get(url)
-        result = res.json()
-        zero_block = int(result["result"])
-        print(f"{zero_block}, zero_block")
+        if zero_block is None:
+            import requests
+            res = requests.get(Networks[network].api_scan)
+            result = res.json()
+            zero_block = int(result["result"])
+            print(f"Starting block was not selected so starting from: {zero_block}")
+        else:
+            print(f"Scan starting from block: {zero_block}")
         self.state = {
             "last_scanned_block": int(zero_block),
         }
@@ -54,7 +47,6 @@ class JSONifiedState(EventScannerState):
             print(
                 f"Restored the state, last block scan ended at {self.state['last_scanned_block']}"
             )
-            print(self.state["last_scanned_block"])
         except (IOError, json.decoder.JSONDecodeError):
             print("State starting from scratch")
             self.reset()
@@ -71,24 +63,7 @@ class JSONifiedState(EventScannerState):
     def reset_singletips(self):
         self.single_tips = {"single_tips": {}}
 
-    def restore_feed_tips(self):
-        """Restore the last scan state from a file."""
-        try:
-            self.feed_tips = json.load(open(self.ffeedtips, "rt"))
-            print(f"Feed-tips file restored")
-        except (IOError, json.decoder.JSONDecodeError):
-            print("Feed-tips file starting from scratch")
-            self.reset_feedtips()
-
-    def restore_singletips(self):
-        try:
-            self.single_tips = json.load(open(self.fsingletips, "rt"))
-            print(f"Single-tips file restored")
-        except (IOError, json.decoder.JSONDecodeError):
-            print("Single-tips file starting from scratch")
-            self.reset_singletips()
-
-    def timestampsperEOA(self, EOA: str) -> Optional[List[int]]:
+    def timestampsperEOA(self, EOA: str) -> Optional[list[int]]:
         try:
             return self.state[f"{EOA}"]
         except KeyError:

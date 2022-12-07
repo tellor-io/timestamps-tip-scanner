@@ -1,28 +1,28 @@
-import os
 import asyncio
-from dotenv import load_dotenv
-from jsonified_state import JSONifiedState
-from autopay_calls import AutopayCalls
-from utils import FeedDetails
-from utils import one_time_tips
-from utils import is_timestamp_first_in_window
-from utils import w3_instance
+from timestamps_tip_scanner.jsonified_state import JSONifiedState
+from timestamps_tip_scanner.autopay_calls import AutopayCalls
+from timestamps_tip_scanner.utils import FeedDetails
+from timestamps_tip_scanner.utils import one_time_tips
+from timestamps_tip_scanner.utils import is_timestamp_first_in_window
+from timestamps_tip_scanner.utils import w3_instance
+from timestamps_tip_scanner.constants import Networks
 
 
-async def main():
-    print(f"env loaded: {load_dotenv()}")
-
-    autopay_address = os.getenv("AUTOPAY_ADDRESS", None)
-    print(f"AUTOPAY_ADDRESS: {autopay_address}")
+async def call(network, eoa):
+    autopay_address = Networks[network].autopay_address
+    print(f"Autopay address: {autopay_address}")
 
     state = JSONifiedState()
     state.restore()
-    state.restore_singletips()
-    state.restore_feed_tips()
+    state.reset_singletips()
+    state.reset_feedtips()
 
-    eoa, w3 = w3_instance()
+    api_url = Networks[network].api_node
+    w3 = w3_instance(api_url)
 
     eoa_reported_ids = state.timestampsperEOA(eoa)
+    if not eoa_reported_ids:
+        return None
 
     fetch_feed_ids = AutopayCalls(eoa_reported_ids, w3, autopay_address)
 
@@ -35,16 +35,6 @@ async def main():
     for query_id, timestamps in eoa_reported_ids.items():
         for timestamp in timestamps:
             timestamp_before = timestamps_before[query_id, timestamp]
-            if len(all_tips[query_id]) > 0:
-                single_tips = one_time_tips(
-                    all_tips[query_id], timestamp, timestamp_before
-                )
-            else:
-                continue
-
-            if single_tips:
-                state.process_singletip_timestamps(query_id, timestamp)
-                state.save_single_tips()
 
             for (q_id, feed_id), details in feed_details.items():
                 detail = FeedDetails(*details)
@@ -73,7 +63,17 @@ async def main():
                                 timestamp=timestamp,
                             )
                         state.save_feed_tips()
+            if len(all_tips[query_id]) > 0:
+                single_tips = one_time_tips(
+                    all_tips[query_id], timestamp, timestamp_before
+                )
+            else:
+                continue
 
+            if single_tips:
+                state.process_singletip_timestamps(query_id, timestamp)
+                state.save_single_tips()
+    return state
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(call())
