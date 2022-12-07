@@ -5,7 +5,6 @@ from web3 import HTTPProvider
 from web3 import Web3
 from dataclasses import dataclass
 from web3.contract import Contract
-from eth_utils import to_checksum_address
 
 
 @dataclass
@@ -18,6 +17,7 @@ class FeedDetails:
     interval: int
     window: int
     priceThreshold: int
+    rewardIncreasePerSecond: int
     feedsWithFundingIndex: int
 
 

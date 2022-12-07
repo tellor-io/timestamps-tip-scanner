@@ -54,7 +54,7 @@ class AutopayCalls:
                 Call(
                     self.autopay_address,
                     [
-                        "getDataFeed(bytes32)((uint256,uint256,uint256,uint256,uint256,uint256,uint256))",
+                        "getDataFeed(bytes32)((uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256))",
                         feed_id,
                     ],
                     [[(query_id, feed_id), None]],
@@ -76,12 +76,11 @@ class AutopayCalls:
                 Call(
                     self.autopay_address,
                     [
-                        "getDataBefore(bytes32,uint256)(bool,bytes,uint256)",
+                        "getDataBefore(bytes32,uint256)(bytes,uint256)",
                         bytes.fromhex(query_id[2:]),
                         timestamp,
                     ],
                     [
-                        ["disregard", None],
                         ["disregard", None],
                         [(query_id, timestamp), None],
                     ],

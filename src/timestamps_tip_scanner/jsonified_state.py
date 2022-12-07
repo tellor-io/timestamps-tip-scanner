@@ -47,7 +47,6 @@ class JSONifiedState(EventScannerState):
             print(
                 f"Restored the state, last block scan ended at {self.state['last_scanned_block']}"
             )
-            print(self.state["last_scanned_block"])
         except (IOError, json.decoder.JSONDecodeError):
             print("State starting from scratch")
             self.reset()

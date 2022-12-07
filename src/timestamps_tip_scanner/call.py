@@ -35,16 +35,6 @@ async def call(network, eoa):
     for query_id, timestamps in eoa_reported_ids.items():
         for timestamp in timestamps:
             timestamp_before = timestamps_before[query_id, timestamp]
-            if len(all_tips[query_id]) > 0:
-                single_tips = one_time_tips(
-                    all_tips[query_id], timestamp, timestamp_before
-                )
-            else:
-                continue
-
-            if single_tips:
-                state.process_singletip_timestamps(query_id, timestamp)
-                state.save_single_tips()
 
             for (q_id, feed_id), details in feed_details.items():
                 detail = FeedDetails(*details)
@@ -73,6 +63,16 @@ async def call(network, eoa):
                                 timestamp=timestamp,
                             )
                         state.save_feed_tips()
+            if len(all_tips[query_id]) > 0:
+                single_tips = one_time_tips(
+                    all_tips[query_id], timestamp, timestamp_before
+                )
+            else:
+                continue
+
+            if single_tips:
+                state.process_singletip_timestamps(query_id, timestamp)
+                state.save_single_tips()
     return state
 
 if __name__ == "__main__":

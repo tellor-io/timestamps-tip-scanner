@@ -1,6 +1,7 @@
 import asyncio
 import click
 
+from web3 import Web3
 from timestamps_tip_scanner.call import call
 from timestamps_tip_scanner.timestamps_scanner import run
 
@@ -14,7 +15,8 @@ def scan(network, address, start_block):
 
     ADDRESS: wallet address
     """
-
+    address = Web3.toChecksumAddress(address)
+    network = network.lower()
     run(network, address, start_block)
     asyncio.run(call(network, address))
 
