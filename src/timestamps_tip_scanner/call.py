@@ -73,6 +73,14 @@ async def call(network, eoa):
             if single_tips:
                 state.process_singletip_timestamps(query_id, timestamp)
                 state.save_single_tips()
+    timestamps_list = state.feed_tips['feed_tips'][q_id][feed_id.hex()]
+    claim_status = await fetch_feed_ids.get_reward_claimed_status(bytes.fromhex(q_id[2:]), feed_id, timestamps_list)
+    new_lis=[]
+    for idx, status in enumerate(list(claim_status.values())[0]):
+        if status is False:
+            new_lis.append(timestamps_list[idx])
+    state.feed_tips['feed_tips'][q_id][feed_id.hex()] = new_lis
+    state.save_feed_tips()
     return state
 
 if __name__ == "__main__":
