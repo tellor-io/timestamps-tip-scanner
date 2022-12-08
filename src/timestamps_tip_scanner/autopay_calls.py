@@ -114,18 +114,19 @@ class AutopayCalls:
             return data
         return None
 
-    async def get_reward_claimed_status(self, timestamps: list) -> Any:
+    async def get_reward_claimed_status(self, query_id, feed_id, timestamps: list) -> Any:
         """check if a reported timestamp has already claimed"""
         calls = [
             Call(
                 self.autopay_address,
                 [
-                    "getRewardClaimedStatus(bytes32,bytes32,uint256)(bool)",
-                    int(timestamp),
+                    "getRewardClaimStatusList(bytes32,bytes32,uint256[])(bool[])",
+                    feed_id,
+                    query_id,
+                    timestamps
                 ],
-                [[timestamp, None]],
+                [[feed_id.hex() , None]],
             )
-            for timestamp in timestamps
         ]
         multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)
         data = await multi_call.coroutine()
