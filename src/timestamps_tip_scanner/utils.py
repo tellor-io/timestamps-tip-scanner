@@ -94,9 +94,10 @@ def evm_transaction(
     w3: Web3,
     wallet_address: str,
     private_key: str,
+    gas_limit: int,
     **kwargs,
 ):
-    gas = int(os.getenv("GAS", 400000))
+    gas = gas_limit
     gas_multiplier = int(os.getenv("GAS_MULTIPLIER", 2))
 
     wallet_nonce = w3.eth.get_transaction_count(wallet_address)
