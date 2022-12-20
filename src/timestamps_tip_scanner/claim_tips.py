@@ -50,7 +50,7 @@ class ClaimTips:
             w3=self.w3,
             wallet_address=self.reporter,
             private_key=self.pk,
-            gas_limit=len(self.timestamps) * 100000 + 200000,
+            gas_limit=int(len(self.timestamps) * 100000 + 200000),
             _feedId=feed_id,
             _queryId=self.query_id,
             _timestamps=self.timestamps,
