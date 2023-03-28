@@ -1,17 +1,22 @@
 import logging
-
 import time
-import datetime
-
-from web3 import Web3
-from web3.contract import Contract
-from timestamps_tip_scanner.event_scanner_state import EventScannerState
-from typing import List, Dict, Tuple, Optional, Callable, Iterable
+from typing import Any, Type
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 from eth_abi.codec import ABICodec
 from eth_typing.evm import ChecksumAddress
-from web3._utils.filters import construct_event_filter_params
+from web3 import Web3
 from web3._utils.events import get_event_data
+from web3._utils.filters import construct_event_filter_params
+from web3.contract import Contract
+from web3.contract import ContractEvent
+
+from timestamps_tip_scanner.jsonified_state import JSONifiedState
+from timestamps_tip_scanner.utils import EventData
 
 
 logger = logging.getLogger(__name__)
@@ -33,9 +38,9 @@ class EventScanner:
         reporter: ChecksumAddress,
         web3: Web3,
         contract: Contract,
-        state: EventScannerState,
-        events: List,
-        filters: Dict,
+        state: JSONifiedState,
+        events: List[Type['ContractEvent']],
+        filters: Dict[str, str],
         max_chunk_scan_size: int = 3500,
         max_request_retries: int = 30,
         request_retry_seconds: float = 3.0,
@@ -68,9 +73,10 @@ class EventScanner:
         self.chunk_size_decrease = 0.5
 
         # Factor how was we increase chunk size if no results found
-        self.chunk_size_increase = 2.0
+        self.chunk_size_increase = 2
+        self.NUM_BLOCKS_RESCAN_FOR_FORKS = 10
 
-    def get_suggested_scan_start_block(self):
+    def get_suggested_scan_start_block(self) -> Optional[int]:
         """Get where we should start to scan for new events.
 
         If there are no prior scans, start from block first block today.
@@ -85,7 +91,7 @@ class EventScanner:
             return max(1, end_block - self.NUM_BLOCKS_RESCAN_FOR_FORKS)
         return self.state.reset()
 
-    def get_suggested_scan_end_block(self):
+    def get_suggested_scan_end_block(self) -> int:
         """Get the last mined block on EVM chain we are following."""
 
         # Do not scan all the way to the final block, as this
@@ -95,11 +101,7 @@ class EventScanner:
     def get_last_scanned_block(self) -> int:
         return self.state.get_last_scanned_block()
 
-    def delete_potentially_forked_block_data(self, after_block: int):
-        """Purge old data in the case of blockchain reorganisation."""
-        self.state.delete_data(after_block)
-
-    def scan_chunk(self, start_block, end_block) -> Tuple[int, datetime.datetime, list]:
+    def scan_chunk(self, start_block: int, end_block: int) -> Tuple[int, List[str]]:
         """Read and process events between to block numbers.
 
         Dynamically decrease the size of the chunk if the case JSON-RPC server pukes out.
@@ -112,7 +114,7 @@ class EventScanner:
         for event_type in self.events:
 
             # Callable that takes care of the underlying web3 call
-            def _fetch_events(_start_block, _end_block):
+            def _fetch_events(_start_block: int, _end_block: int) -> List[EventData]:
                 return _fetch_events_for_all_contracts(
                     self.web3,
                     event_type,
@@ -130,11 +132,10 @@ class EventScanner:
                 retries=self.max_request_retries,
                 delay=self.request_retry_seconds,
             )
-
+            if not events:
+                continue
             for evt in events:
-                idx = (
-                    evt.logIndex
-                )  # Integer of the log index position in the block, null when its pending
+                idx = evt.logIndex  # Integer of the log index position in the block, null when its pending
                 # We cannot avoid minor chain reorganisations, but
                 # at least we must avoid blocks that are not mined yet
                 assert idx is not None, "Somehow tried to scan a pending block"
@@ -142,22 +143,23 @@ class EventScanner:
                 if evt.args._reporter == self.reporter:
                     logger.debug(
                         "Processing event %s, block:%d count:%d",
-                        evt["event"],
-                        evt["blockNumber"],
+                        evt.event,
+                        evt.blockNumber,
                     )
                     processed = self.state.process_event(evt)
                     all_processed.append(processed)
 
         return end_block, all_processed
 
-    def estimate_next_chunk_size(self, current_chuck_size: int, event_found_count: int):
+    def estimate_next_chunk_size(self, current_chuck_size: int, event_found_count: int) -> int:
         """Try to figure out optimal chunk size
 
         Our scanner might need to scan the whole blockchain for all events
 
         * We want to minimize API calls over empty blocks
 
-        * We want to make sure that one scan chunk does not try to process too many entries once, as we try to control commit buffer size and potentially asynchronous busy loop
+        * We want to make sure that one scan chunk does not try to process too many entries once, as we try to control
+        commit buffer size and potentially asynchronous busy loop
 
         * Do not overload node serving JSON-RPC API by asking data for too many events at a time
 
@@ -181,11 +183,11 @@ class EventScanner:
 
     def scan(
         self,
-        start_block,
-        end_block,
-        start_chunk_size=3499,
-        progress_callback=Optional[Callable],
-    ) -> Tuple[list, int]:
+        start_block: int,
+        end_block: int,
+        start_chunk_size: int = 3499,
+        progress_callback: Optional[Callable[[int, int, int], None]] = None,
+    ) -> Tuple[List[str], int]:
         """Perform a NewReport scan.
 
         :param start_block: The first block included in the scan
@@ -212,8 +214,6 @@ class EventScanner:
 
         while current_block <= end_block:
 
-            self.state.start_chunk(current_block, chunk_size)
-
             # Print some diagnostics to logs to try to fiddle with real world JSON-RPC API performance
             estimated_end_block = current_block + chunk_size
             logger.debug(
@@ -226,9 +226,7 @@ class EventScanner:
             )
 
             start = time.time()
-            actual_end_block, new_entries = self.scan_chunk(
-                current_block, estimated_end_block
-            )
+            actual_end_block, new_entries = self.scan_chunk(current_block, estimated_end_block)
 
             # Where does our current chunk scan ends - are we out of chain yet?
             if self.get_suggested_scan_end_block() < actual_end_block:
@@ -236,14 +234,12 @@ class EventScanner:
             else:
                 current_end = actual_end_block
 
-            last_scan_duration = time.time() - start
+            last_scan_duration = int(time.time() - start)
             all_processed += new_entries
 
             # Print progress bar
             if progress_callback:
-                progress_callback(
-                    start_block, end_block, current_block, chunk_size, len(new_entries)
-                )
+                progress_callback(current_block, chunk_size, len(new_entries))
 
             # Try to guess how many blocks to fetch over `eth_getLogs` API next time
             chunk_size = self.estimate_next_chunk_size(chunk_size, len(new_entries))
@@ -255,7 +251,9 @@ class EventScanner:
         return all_processed, total_chunks_scanned
 
 
-def _retry_web3_call(func, start_block, end_block, retries, delay) -> Tuple[int, list]:
+def _retry_web3_call(
+    func: Callable[[int, int], List[EventData]], start_block: int, end_block: int, retries: int, delay: float
+) -> Tuple[Optional[int], Optional[List[EventData]]]:
     """A custom retry loop to throttle down block range.
 
     If our JSON-RPC server cannot serve all incoming `eth_getLogs` in a single request,
@@ -295,11 +293,12 @@ def _retry_web3_call(func, start_block, end_block, retries, delay) -> Tuple[int,
             else:
                 logger.warning("Out of retries")
                 raise
+    return None, None
 
 
 def _fetch_events_for_all_contracts(
-    web3, event, argument_filters: dict, from_block: int, to_block: int
-) -> Iterable:
+    web3: Web3, event: Type['ContractEvent'], argument_filters: Dict[str, Any], from_block: int, to_block: int
+) -> List[EventData]:
     """Get events using eth_getLogs API.
 
     This method is detached from any contract instance.
@@ -337,9 +336,7 @@ def _fetch_events_for_all_contracts(
         toBlock=to_block,
     )
 
-    logger.debug(
-        "Querying eth_getLogs with the following parameters: %s", event_filter_params
-    )
+    logger.debug("Querying eth_getLogs with the following parameters: %s", event_filter_params)
 
     # Call JSON-RPC API on your Ethereum node.
     # get_logs() returns raw AttributedDict entries
