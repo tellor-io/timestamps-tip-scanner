@@ -1,8 +1,11 @@
 import logging
-from web3 import Web3
-from web3.exceptions import ContractLogicError
-from web3.contract import Contract, ContractFunction
+
 from eth_account.signers.local import LocalAccount
+from web3 import Web3
+from web3.contract import Contract
+from web3.contract import ContractFunction
+from web3.exceptions import ContractLogicError
+
 from timestamps_tip_scanner.autopay_calls import AutopayCalls
 
 logger = logging.getLogger(__name__)
@@ -18,9 +21,7 @@ def claim_tips(w3: Web3, autopay_contract: Contract, account: LocalAccount) -> N
     for feed_id, query_id in claim_tip_params:
         timestamps = claim_tip_params[(feed_id, query_id)]
         function = autopay_contract.get_function_by_name("claimTip")
-        function_call: ContractFunction = function(
-            _feedId=feed_id, _queryId=query_id, _timestamps=timestamps
-        )
+        function_call: ContractFunction = function(_feedId=feed_id, _queryId=query_id, _timestamps=timestamps)
         try:
             gas = function_call.estimateGas({"from": account.address}, "latest")
         except ContractLogicError as e:

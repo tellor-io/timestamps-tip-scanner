@@ -188,21 +188,30 @@ class AutopayCalls:
                 continue
             for timestamp in reports[query_id]:
                 # check if timestamp in window
-                in_window, _ = filtr.is_timestamp_first_in_window(
+                reward_increase = feeds[(query_id, feed_id)].rewardIncreasePerSecond
+                reward_amount = feeds[(query_id, feed_id)].reward
+                balance = feeds[(query_id, feed_id)].balance
+                in_window, time_diff = filtr.is_timestamp_first_in_window(
                     timestamp_before=before_timestamps[("timestamps", query_id, timestamp)],
                     timestamp_to_check=timestamp,
                     feed_start_timestamp=feeds[(query_id, feed_id)].startTime,
                     feed_window=feeds[(query_id, feed_id)].window,
                     feed_interval=feeds[(query_id, feed_id)].interval,
                 )
+                # check if reward amount is covered by balance
+                # taking into account reward increase
+                reward_amount += reward_increase * time_diff
+                if reward_amount < balance:
+                    break
+
                 if in_window:
+                    # if timestamp is first in window, add to list of timestamps for (feedId,)
                     if (feed_id, query_id) not in claim_params:
                         claim_params[(feed_id, query_id)] = []
                     claim_params[(feed_id, query_id)].append(timestamp)
-            reward_count = round(feeds[(query_id, feed_id)].balance / feeds[(query_id, feed_id)].reward)
-            if (feed_id, query_id) in claim_params:
-                if reward_count < len(claim_params[(feed_id, query_id)]):
-                    claim_params[(feed_id, query_id)] = claim_params[(feed_id, query_id)][:reward_count]
+                # subtract reward amount from balance for next iteration
+                balance -= reward_amount
+
         return claim_params
 
     def timestamps_before_call(self, reports: Optional[Dict[str, List[int]]] = None) -> Optional[List[Call]]:
