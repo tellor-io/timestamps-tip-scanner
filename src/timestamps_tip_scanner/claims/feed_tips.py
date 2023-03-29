@@ -37,6 +37,5 @@ def claim_tips(w3: Web3, autopay_contract: Contract, account: LocalAccount) -> N
         signed_tx = account.sign_transaction(tx)  # type: ignore
         tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
         w3.eth.wait_for_transaction_receipt(tx_hash)
-        w3.middleware_onion.clear()
         logger.info(f"Claimed tip for {feed_id}-{query_id} and {timestamps}")
         logger.info(f"Tx hash: {tx_hash.hex()}")
