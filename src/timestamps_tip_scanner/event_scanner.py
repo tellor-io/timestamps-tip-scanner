@@ -1,11 +1,12 @@
 import logging
 import time
-from typing import Any, Type
+from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Type
 
 from eth_abi.codec import ABICodec
 from eth_typing.evm import ChecksumAddress
@@ -39,7 +40,7 @@ class EventScanner:
         web3: Web3,
         contract: Contract,
         state: JSONifiedState,
-        events: List[Type['ContractEvent']],
+        events: List[Type["ContractEvent"]],
         filters: Dict[str, str],
         max_chunk_scan_size: int = 3500,
         max_request_retries: int = 30,
@@ -297,7 +298,7 @@ def _retry_web3_call(
 
 
 def _fetch_events_for_all_contracts(
-    web3: Web3, event: Type['ContractEvent'], argument_filters: Dict[str, Any], from_block: int, to_block: int
+    web3: Web3, event: Type["ContractEvent"], argument_filters: Dict[str, Any], from_block: int, to_block: int
 ) -> List[EventData]:
     """Get events using eth_getLogs API.
 

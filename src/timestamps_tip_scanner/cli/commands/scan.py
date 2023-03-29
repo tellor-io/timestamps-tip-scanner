@@ -10,8 +10,6 @@ from telliot_core.directory import contract_directory
 
 from timestamps_tip_scanner.timestamps_scanner import run
 
-# from timestamps_tip_scanner.call import call
-
 
 cfg = TelliotConfig()
 
@@ -79,4 +77,3 @@ def scan(chain_id: int, account: str, address: ChecksumAddress, start_block: Opt
     tellorflex_contract = w3.eth.contract(address=tellorflex_address, abi=abi)
 
     run(w3=w3, reporter=address, tellorflex_contract=tellorflex_contract, chain_id=chain_id, starting_block=start_block)
-    # asyncio.run(call(network, address))

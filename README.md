@@ -4,26 +4,26 @@ Concepts and a chunk of the code came from [this](https://web3py.readthedocs.io/
 
 
 Steps:
-```cli
-git clone https://github.com/tellor-io/timestamps-tip-scanner.git
-cd timestamps-tip-scanner
-echo "MUMBAI_NODE = https://polygon-mumbai.g.alchemy.com/v2/<put_your_api_key_here>" >> .env
-```
-```cli
+```shell
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
 pip install -e .
 ```
-To fetch timestamps, run:
-```cli
-python src/timestamps_tip_scanner/run.py network <wallet>
+First fetch timestamps:
+```shell
+scanner scan <CHAIN-ID> <ACCOUNT-NAME> or <PUBLIC-KEY> <--start-block>
 ```
-Supported Networks:
-- polygon
-- mumbai
+Claim one time tips:
+```shell
+scanner claim-one-time-tip <CHAIN-ID> <ACCOUNT-NAME> or <PRIVATE-KEY>
+```
+Claim feed tips:
+```shell
+scanner claim-tip <CHAIN-ID> <ACCOUNT-NAME> or <PRIVATE-KEY>
+```
+######Supported Networks:
+- 137 (polygon)
+- 80001 (mumbai)
 
-To start at a certain block use the optional flag ```--start-block <num>```
 
 :warning: Disclaimer - Code hasn't been fully tested so use at own risk!
-

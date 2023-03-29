@@ -1,7 +1,8 @@
 import click
 
+from timestamps_tip_scanner.cli.commands.claim_one_time_tip import claim_one_time_tip
+from timestamps_tip_scanner.cli.commands.claim_tip import claim_tip
 from timestamps_tip_scanner.cli.commands.scan import scan
-from timestamps_tip_scanner.cli.commands.single_claims import single_claims
 
 
 @click.group(invoke_without_command=True)
@@ -13,4 +14,5 @@ def main(ctx: click.Context) -> None:
 
 
 main.add_command(scan)
-main.add_command(single_claims)
+main.add_command(claim_one_time_tip)
+main.add_command(claim_tip)

@@ -1,15 +1,9 @@
-import json
-import math
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple
+from typing import List
 
 from eth_utils.typing import ChecksumAddress
 from hexbytes import HexBytes
-from web3 import HTTPProvider
-from web3 import Web3
-from web3.contract import Contract
-from web3.types import TxReceipt
 
 
 @dataclass
@@ -84,28 +78,3 @@ def one_time_tips(tips_lis: List[int], timestamp: int, timestamp_before: int) ->
         )
         return all(conditions)
     return False
-
-
-def is_timestamp_first_in_window(
-    timestamp_before: int,
-    timestamp_to_check: int,
-    feed_start_timestamp: int,
-    feed_window: int,
-    feed_interval: int,
-) -> bool:
-    """
-    Calculates to check if timestamp(timestamp_to_check) is first in window
-
-    Return: bool
-    """
-    # Number of intervals since start time
-    num_intervals = math.floor((timestamp_to_check - feed_start_timestamp) / feed_interval)
-    # Start time of latest submission window
-    current_window_start = feed_start_timestamp + (feed_interval * num_intervals)
-    if timestamp_before is None:
-        timestamp_before = 0
-    eligible = [
-        (timestamp_to_check - current_window_start) < feed_window,
-        timestamp_before < current_window_start,
-    ]
-    return all(eligible)

@@ -1,12 +1,14 @@
 import os
+from typing import Optional
+
 import click
-from eth_account import Account
-from telliot_core.directory import contract_directory
-from telliot_core.apps.telliot_config import TelliotConfig
 from chained_accounts import find_accounts
+from eth_account import Account
+from telliot_core.apps.telliot_config import TelliotConfig
+from telliot_core.directory import contract_directory
 from telliot_core.utils.key_helpers import lazy_unlock_account
 
-from timestamps_tip_scanner.claims.feed_tips import claim_tips
+from timestamps_tip_scanner.claims.single_tips import claim_single_tips
 
 cfg = TelliotConfig()
 
@@ -15,15 +17,15 @@ cfg = TelliotConfig()
 @click.argument("chain_id", type=int)
 @click.option("--account", "-a", help="Account name, required if address not selected")
 @click.option("--private-key", "-pk", help="private key, required if account not selected")
-def claim(chain_id: int, account: str, private_key: str) -> None:
+def claim_one_time_tip(chain_id: int, account: str, private_key: Optional[str]) -> None:
     """
-    CHAIN ID: desired chain to scan
+    CHAIN ID: desired chain where to claim one time tips
 
     ACCOUNT: chained account name to use
 
     PRIVATE KEY: private key to use
     """
-    private_key = os.getenv("PRIVATE_KEY")  # type: ignore
+    private_key = os.getenv("PRIVATE_KEY")
     if not private_key and not account:
         raise click.BadOptionUsage(option_name="private_key/account", message="private key or account name required")
 
@@ -51,14 +53,18 @@ def claim(chain_id: int, account: str, private_key: str) -> None:
         raise click.BadOptionUsage(option_name="chain_id", message="chain id not found")
 
     endpoint = endpoints[0]
+    if not endpoint.connect():
+        raise click.BadArgumentUsage(
+            f"Could not connect to endpoint for {chain_id}\n"
+            "Please check your ~/telliot/endpoints.yaml file and try again"
+        )
     w3 = endpoint._web3
     contract_info = contract_directory.find(chain_id=chain_id, name="tellor360-autopay")
     if not contract_info:
         raise click.BadArgumentUsage(
-            f"Tellorflex not found in telliot on chain_id {chain_id}"
-            "Check supported tellor chain ids")
-
+            f"Tellorflex not found in telliot on chain_id {chain_id}\nCheck supported tellor chain ids"
+        )
     autopay_address = contract_info[0].address[chain_id]
     abi = contract_info[0].get_abi(chain_id=chain_id)
     autopay_contract = w3.eth.contract(address=autopay_address, abi=abi)
-    claim_tips(w3, autopay_contract, acct)
+    claim_single_tips(w3, autopay_contract, acct)

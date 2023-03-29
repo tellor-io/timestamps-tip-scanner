@@ -1,4 +1,4 @@
-report_timestamps.json
+new_report_timestamps.json
 single_tips.json
 feed_tips.json
 *.ipynb
@@ -6,6 +6,7 @@ feed_tips.json
 .tox
 *.github
 .pre-commit-config.yml
+.DS_Store
 
 # Environments
 .env

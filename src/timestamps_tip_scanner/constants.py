@@ -20,3 +20,5 @@ CHAIN_ID_MAPPING = {
     },
 }
 REPORTS_FILENAME = "new_report_timestamps.json"
+TWELVE_HOURS = 43200
+FOUR_WEEKS = 4 * 7 * 24 * 60 * 60  # 4 weeks in seconds
