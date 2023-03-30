@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from eth_utils import to_checksum_address
 from telliot_core.apps.telliot_config import TelliotConfig
 from telliot_core.directory import contract_directory
+from telliot_core.directory import ContractInfo
 from telliot_core.model.endpoints import RPCEndpoint
 from web3 import Web3
 
@@ -27,7 +28,7 @@ def w3_connection(chain_id: int) -> Web3:
     return w3  # type: ignore
 
 
-def fetch_contract(chain_id: int, name: str) -> contract_directory.ContractInfo:
+def fetch_contract(chain_id: int, name: str) -> ContractInfo:
     return contract_directory.find(chain_id=chain_id, name=name)[0]
 
 
