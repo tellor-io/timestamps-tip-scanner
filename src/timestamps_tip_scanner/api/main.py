@@ -1,5 +1,6 @@
 import json
 import time
+from typing import Any
 from typing import Optional
 
 from fastapi import FastAPI
@@ -15,7 +16,7 @@ from timestamps_tip_scanner.constants import REPORTS_FILENAME
 app = FastAPI()
 
 
-def reports_file(chain_id: int, address: str):
+def reports_file(chain_id: int, address: str) -> Any:
     try:
         with open(REPORTS_FILENAME, "r") as f:
             reports = json.load(f)
@@ -32,10 +33,11 @@ def reports_file(chain_id: int, address: str):
         return None
     if int(time.time()) - last_scan > 60 * 10:  # if last scan was more than 10 minutes ago scan again
         return None
+    return reports
 
 
 @app.get("/", response_class=HTMLResponse)
-def guide():
+def guide() -> str:
     return """<pre>Endpoints:
     /reports/{chain_id}?address={address}&starting_block={starting_block}
     /feed_tips/{chain_id}?address={address}&starting_block={starting_block}
@@ -43,15 +45,15 @@ def guide():
 
 
 @app.get("/reports/{chain_id}", response_class=HTMLResponse)
-def reports(chain_id: int, address: str, starting_block: Optional[int] = None):
+def reports(chain_id: int, address: str, starting_block: Optional[int] = None) -> str:
     data = fetch_data(chain_id, address, starting_block).serve()
-    data = json.dumps(data, indent=4)
-    content = f"<pre>{data}</pre>"
+    data_formatted = json.dumps(data, indent=4)
+    content = f"<pre>{data_formatted}</pre>"
     return content
 
 
 @app.get("/feed_tips/{chain_id}", response_class=HTMLResponse)
-def feed_tips(chain_id: int, address: str, starting_block: Optional[int] = None):
+def feed_tips(chain_id: int, address: str, starting_block: Optional[int] = None) -> str:
     if reports_file(chain_id, address) is None:
         _ = fetch_data(chain_id, address, starting_block)
     apay = autopay(chain_id, address)
@@ -62,7 +64,7 @@ def feed_tips(chain_id: int, address: str, starting_block: Optional[int] = None)
 
 
 @app.get("/tips/{chain_id}", response_class=HTMLResponse)
-def one_time_tips(chain_id: int, address: str, starting_block: Optional[int] = None):
+def one_time_tips(chain_id: int, address: str, starting_block: Optional[int] = None) -> str:
     if reports_file(chain_id, address) is None:
         _ = fetch_data(chain_id, address, starting_block)
     apay = autopay(chain_id, address)

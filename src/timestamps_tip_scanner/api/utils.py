@@ -9,6 +9,7 @@ from telliot_core.model.endpoints import RPCEndpoint
 from web3 import Web3
 
 from timestamps_tip_scanner.autopay_calls import AutopayCalls
+from timestamps_tip_scanner.jsonified_state import JSONifiedState
 from timestamps_tip_scanner.timestamps_scanner import run
 
 
@@ -23,20 +24,20 @@ def w3_connection(chain_id: int) -> Web3:
     if not endpoint.connect():
         raise Exception(f"Could not connect to endpoint {endpoint}")
     w3 = endpoint._web3
-    return w3
+    return w3  # type: ignore
 
 
-def fetch_contract(chain_id: int, name: str):
+def fetch_contract(chain_id: int, name: str) -> contract_directory.ContractInfo:
     return contract_directory.find(chain_id=chain_id, name=name)[0]
 
 
-def autopay(chain_id: int, wallet: str):
+def autopay(chain_id: int, wallet: str) -> AutopayCalls:
     w3 = w3_connection(chain_id)
     autopay_address = fetch_contract(chain_id, "tellor360-autopay").address[chain_id]
-    return AutopayCalls(w3=w3, wallet=wallet, autopay_address=autopay_address)
+    return AutopayCalls(w3=w3, wallet=to_checksum_address(wallet), autopay_address=autopay_address)
 
 
-def fetch_data(chain_id: int, address: str, starting_block: Optional[int]):
+def fetch_data(chain_id: int, address: str, starting_block: Optional[int]) -> JSONifiedState:
     w3 = w3_connection(chain_id=chain_id)
     contract_info = fetch_contract(chain_id, "tellor360-oracle")
     if not contract_info:

@@ -77,7 +77,7 @@ class EventScanner:
         self.chunk_size_increase = 2
         self.NUM_BLOCKS_RESCAN_FOR_FORKS = 10
 
-    def get_suggested_scan_start_block(self) -> Optional[int]:
+    def get_suggested_scan_start_block(self) -> Any:
         """Get where we should start to scan for new events.
 
         If there are no prior scans, start from block first block today.

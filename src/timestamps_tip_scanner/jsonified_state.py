@@ -124,7 +124,7 @@ class JSONifiedState:
             feed_tips[query_id][feed_id] = [*set(feed_tips[query_id][feed_id])]
 
     def process_singletip_timestamps(self, query_id: str, timestamp: int) -> None:
-        single_tips = self.single_tips["single_tips"]
+        single_tips = self.single_tips["single_tips"]  # type: ignore
         if query_id not in single_tips:
             single_tips[query_id] = []
             single_tips[query_id].append(timestamp)
@@ -166,7 +166,7 @@ class JSONifiedState:
         queryId = [*set(queryId)]
         return f"{txhash}-{log_index}"
 
-    def serve(self):
+    def serve(self) -> Dict[ChecksumAddress, Any]:
         if self.chain_name in self.state:
             return self.state[self.chain_name]
         return {}
