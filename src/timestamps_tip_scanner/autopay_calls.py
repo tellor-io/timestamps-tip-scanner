@@ -52,6 +52,8 @@ class AutopayCalls:
             return None
         if "last_scanned_block" in reports_by_address:
             del reports_by_address["last_scanned_block"]
+        if "last_scanned_time" in reports_by_address:
+            del reports_by_address["last_scanned_time"]
         return reports_by_address  # type: ignore
 
     def feed_ids_call(self) -> Optional[List[Call]]:

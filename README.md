@@ -25,5 +25,14 @@ scanner claim-tip <CHAIN-ID> <ACCOUNT-NAME> or <PRIVATE-KEY>
 - 137 (polygon)
 - 80001 (mumbai)
 
-
+######API
+```
+uvicorn timestamps_tip_scanner.api.main:app --reload
+```
+######Enpoints
+```
+/reports/{chain_id}?address={address}&starting_block={starting_block}
+/feed_tips/{chain_id}?address={address}
+/tips/{chain_id}?address={address}
+```
 :warning: Disclaimer - Code hasn't been fully tested so use at own risk!

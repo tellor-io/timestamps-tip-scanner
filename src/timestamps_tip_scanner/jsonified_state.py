@@ -36,7 +36,7 @@ class JSONifiedState:
         self.fsingletips = "single_tips.json"
         self.ffeedtips = "feed_tips.json"
         # How many second ago we saved the JSON file
-        self.last_save: float = 0.0
+        self.last_save: int = 0
         self.date = datetime.today().strftime("%b-%d-%Y")
 
     def reset(self, starter_block: Optional[int] = None) -> None:
@@ -62,7 +62,7 @@ class JSONifiedState:
                 self.reset()
             else:
                 self.logger.info(
-                    "Restored existing state, last block scan ended at"
+                    "Restored existing state, last block scan ended at "
                     f"{self.state[self.chain_name][self.address]['last_scanned_block']}"
                 )
         except (IOError, json.decoder.JSONDecodeError):
@@ -73,7 +73,7 @@ class JSONifiedState:
         """Save everything we have scanned so far in a file."""
         with open(self.freports, "wt") as f:
             json.dump(self.state, f)
-        self.last_save = time.time()
+        self.last_save = int(time.time())
 
     def reset_feedtips(self) -> None:
         self.feed_tips: Dict[str, Any] = {"feed_tips": {}}
@@ -139,10 +139,12 @@ class JSONifiedState:
     def end_chunk(self, block_number: int) -> None:
         """Save at the end of each block, so we can resume in the case of a crash or CTRL+C"""
         # Next time the scanner is started we will resume from this block
+        current_time = int(time.time())
         self.state[self.chain_name][self.address]["last_scanned_block"] = block_number
+        self.state[self.chain_name][self.address]["last_scanned_time"] = current_time
 
         # Save the database file for every minute
-        if time.time() - self.last_save > 60:
+        if current_time - self.last_save > 60:
             self.save()
 
     def process_event(self, event: EventData) -> str:
@@ -163,3 +165,8 @@ class JSONifiedState:
         queryId.append(args._time)
         queryId = [*set(queryId)]
         return f"{txhash}-{log_index}"
+
+    def serve(self):
+        if self.chain_name in self.state:
+            return self.state[self.chain_name]
+        return {}

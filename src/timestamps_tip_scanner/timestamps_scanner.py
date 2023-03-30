@@ -32,7 +32,7 @@ def run(
     else:
         state.reset(starting_block)
 
-    max_batch_scan_size = int(os.getenv("BATCH_SIZE", 3499))
+    max_batch_scan_size = int(os.getenv("BATCH_SIZE", 100000))
 
     scanner = EventScanner(
         web3=w3,
