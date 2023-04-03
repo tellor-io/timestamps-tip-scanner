@@ -60,7 +60,7 @@ def feed_tips(chain_id: int, address: str, starting_block: Optional[int] = None)
     data = apay.reward_claimed_status_check()
     if data is None:
         return "<pre>{}</pre>"
-    return f"<pre>{timestamps_to_claim(apay=apay)}</pre>"
+    return f"<pre>{data}</pre>"
 
 
 @app.get("/tips/{chain_id}", response_class=HTMLResponse)

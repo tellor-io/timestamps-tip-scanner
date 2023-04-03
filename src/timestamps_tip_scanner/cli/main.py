@@ -3,6 +3,9 @@ import click
 from timestamps_tip_scanner.cli.commands.claim_one_time_tip import claim_one_time_tip
 from timestamps_tip_scanner.cli.commands.claim_tip import claim_tip
 from timestamps_tip_scanner.cli.commands.scan import scan
+from timestamps_tip_scanner.logger import setup_logger
+
+setup_logger()
 
 
 @click.group(invoke_without_command=True)

@@ -1,7 +1,8 @@
 import json
-import time
+import logging
+import os
 from datetime import datetime
-from logging import Logger
+from time import time
 from typing import Any
 from typing import Dict
 from typing import List
@@ -24,12 +25,10 @@ class JSONifiedState:
     Simple load/store massive JSON on start up.
     """
 
-    def __init__(self, chain_id: int, address: str, logger: Logger) -> None:
+    def __init__(self, chain_id: int, address: str) -> None:
         self.chain_id = chain_id
-        self.chain_name = CHAIN_ID_MAPPING[self.chain_id]["name"]
+        self.chain_name = CHAIN_ID_MAPPING.get(self.chain_id, {}).get("name")
         self.address = to_checksum_address(address)
-        self.logger = logger
-        # self.state: Dict[str, Any] = {}
         self.eligible = None
         self.single_tips: Optional[Dict[str, Any]] = None
         self.freports = REPORTS_FILENAME
@@ -39,16 +38,19 @@ class JSONifiedState:
         self.last_save: int = 0
         self.date = datetime.today().strftime("%b-%d-%Y")
 
+    def default_start_block(self) -> int:
+        url = CHAIN_ID_MAPPING[self.chain_id]["explorer_api"]
+        res = requests.get(url)
+        result = res.json()
+        return int(result["result"])
+
     def reset(self, starter_block: Optional[int] = None) -> None:
         """Create initial state of nothing scanned."""
         if starter_block is not None:
-            self.logger.info(f"Scan starting from block: {starter_block}")
+            logging.info(f"Scan starting from block: {starter_block}")
         else:
-            url = CHAIN_ID_MAPPING[self.chain_id]["explorer_api"]
-            res = requests.get(url)
-            result = res.json()
-            starter_block = int(result["result"])
-            self.logger.info(f"Starting block was not selected so starting from: {starter_block}")
+            starter_block = self.default_start_block()
+            logging.info(f"Starting block was not selected so starting from: {starter_block}")
 
         self.state = {self.chain_name: {self.address: {"last_scanned_block": int(starter_block)}}}
         return None
@@ -58,10 +60,12 @@ class JSONifiedState:
         try:
             self.state = json.load(open(self.freports, "rt"))
             if self.state is None:
-                self.logger.info("State starting from scratch")
+                logging.info("State starting from scratch")
+                self.reset()
+            elif self.chain_name not in self.state or self.address not in self.state[self.chain_name]:
                 self.reset()
             else:
-                self.logger.info(
+                logging.info(
                     "Restored existing state, last block scan ended at "
                     f"{self.state[self.chain_name][self.address]['last_scanned_block']}"
                 )
@@ -73,7 +77,7 @@ class JSONifiedState:
         """Save everything we have scanned so far in a file."""
         with open(self.freports, "wt") as f:
             json.dump(self.state, f)
-        self.last_save = int(time.time())
+        self.last_save = int(time())
 
     def reset_feedtips(self) -> None:
         self.feed_tips: Dict[str, Any] = {"feed_tips": {}}
@@ -139,7 +143,7 @@ class JSONifiedState:
     def end_chunk(self, block_number: int) -> None:
         """Save at the end of each block, so we can resume in the case of a crash or CTRL+C"""
         # Next time the scanner is started we will resume from this block
-        current_time = int(time.time())
+        current_time = int(time())
         self.state[self.chain_name][self.address]["last_scanned_block"] = block_number
         self.state[self.chain_name][self.address]["last_scanned_time"] = current_time
 
@@ -170,3 +174,11 @@ class JSONifiedState:
         if self.chain_name in self.state:
             return self.state[self.chain_name]
         return {}
+
+    @staticmethod
+    def delete_file() -> None:
+        if os.path.isfile(REPORTS_FILENAME):
+            try:
+                os.remove(REPORTS_FILENAME)
+            except Exception as e:
+                print(f"Error deleting the file {REPORTS_FILENAME}: {e}")

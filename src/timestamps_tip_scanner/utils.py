@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from typing import List
 
-from eth_utils.typing import ChecksumAddress
+from eth_typing import ChecksumAddress
 from hexbytes import HexBytes
 
 

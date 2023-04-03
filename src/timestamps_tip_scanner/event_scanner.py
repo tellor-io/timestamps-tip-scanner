@@ -1,5 +1,6 @@
 import logging
-import time
+from time import sleep
+from time import time
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -9,7 +10,7 @@ from typing import Tuple
 from typing import Type
 
 from eth_abi.codec import ABICodec
-from eth_typing.evm import ChecksumAddress
+from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3._utils.events import get_event_data
 from web3._utils.filters import construct_event_filter_params
@@ -18,9 +19,6 @@ from web3.contract import ContractEvent
 
 from timestamps_tip_scanner.jsonified_state import JSONifiedState
 from timestamps_tip_scanner.utils import EventData
-
-
-logger = logging.getLogger(__name__)
 
 
 class EventScanner:
@@ -55,7 +53,6 @@ class EventScanner:
         :param request_retry_seconds: Delay between failed requests to let JSON-RPC server to recover
         """
 
-        self.logger = logger
         self.web3 = web3
         self.contract = contract
         self.state = state
@@ -97,7 +94,7 @@ class EventScanner:
 
         # Do not scan all the way to the final block, as this
         # block might not be mined yet
-        return self.web3.eth.blockNumber - 1
+        return self.web3.eth.block_number - 1
 
     def get_last_scanned_block(self) -> int:
         return self.state.get_last_scanned_block()
@@ -142,7 +139,7 @@ class EventScanner:
                 assert idx is not None, "Somehow tried to scan a pending block"
 
                 if evt.args._reporter == self.reporter:
-                    logger.debug(
+                    logging.debug(
                         "Processing event %s, block:%d count:%d",
                         evt.event,
                         evt.blockNumber,
@@ -217,7 +214,7 @@ class EventScanner:
 
             # Print some diagnostics to logs to try to fiddle with real world JSON-RPC API performance
             estimated_end_block = current_block + chunk_size
-            logger.debug(
+            logging.debug(
                 "Scanning NewReports for blocks: %d - %d, chunk size %d, last chunk scan took %f, last logs found %d",
                 current_block,
                 estimated_end_block,
@@ -226,7 +223,7 @@ class EventScanner:
                 last_logs_found,
             )
 
-            start = time.time()
+            start = time()
             actual_end_block, new_entries = self.scan_chunk(current_block, estimated_end_block)
 
             # Where does our current chunk scan ends - are we out of chain yet?
@@ -235,7 +232,7 @@ class EventScanner:
             else:
                 current_end = actual_end_block
 
-            last_scan_duration = int(time.time() - start)
+            last_scan_duration = int(time() - start)
             all_processed += new_entries
 
             # Print progress bar
@@ -278,7 +275,7 @@ def _retry_web3_call(
             # https://github.com/ethereum/go-ethereum/issues/20426
             if i < retries - 1:
                 # Give some more verbose info than the default middleware
-                logger.warning(
+                logging.warning(
                     "Retrying events for block range %d - %d (%d) failed with %s, retrying in %s seconds",
                     start_block,
                     end_block,
@@ -289,10 +286,10 @@ def _retry_web3_call(
                 # Decrease the `eth_getBlocks` range
                 end_block = start_block + ((end_block - start_block) // 2)
                 # Let the JSON-RPC to recover e.g. from restart
-                time.sleep(delay)
+                sleep(delay)
                 continue
             else:
-                logger.warning("Out of retries")
+                logging.warning("Out of retries")
                 raise
     return None, None
 
@@ -337,11 +334,11 @@ def _fetch_events_for_all_contracts(
         toBlock=to_block,
     )
 
-    logger.debug("Querying eth_getLogs with the following parameters: %s", event_filter_params)
+    logging.debug("Querying eth_getLogs with the following parameters: %s", event_filter_params)
 
     # Call JSON-RPC API on your Ethereum node.
     # get_logs() returns raw AttributedDict entries
-    logs = web3.eth.getLogs(event_filter_params)
+    logs = web3.eth.get_logs(event_filter_params)
 
     # Convert raw binary data to Python proxy objects as described by ABI
     all_events = []

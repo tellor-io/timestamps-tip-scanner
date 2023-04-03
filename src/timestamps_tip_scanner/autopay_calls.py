@@ -21,7 +21,6 @@ from timestamps_tip_scanner.constants import REPORTS_FILENAME
 from timestamps_tip_scanner.constants import TWELVE_HOURS
 from timestamps_tip_scanner.utils import FeedDetails
 
-logger = logging.getLogger(__name__)
 
 PastTipType = Union[Tuple[str, str, int], Tuple[str, str]]
 
@@ -36,7 +35,6 @@ class AutopayCalls:
         self.w3 = w3
         self.wallet = wallet
         self.autopay_address = autopay_address
-        self.log = logging.getLogger(__name__)
         self.chain_name = CHAIN_ID_MAPPING[self.w3.eth.chain_id]["name"]
         with open(REPORTS_FILENAME, "r") as f:
             self.reports: Dict[str, Dict[str, Dict[str, Union[int, List[int]]]]] = json.load(f)
@@ -44,11 +42,11 @@ class AutopayCalls:
     def read_reports(self) -> Optional[Dict[str, List[int]]]:
         reports_by_chain = self.reports.get(self.chain_name)
         if reports_by_chain is None:
-            self.log.info(f"No reports for chain {self.chain_name}")
+            logging.info(f"No reports for chain {self.chain_name}")
             return None
         reports_by_address = reports_by_chain.get(self.wallet)
         if reports_by_address is None:
-            self.log.info(f"No reports for address {self.wallet}")
+            logging.info(f"No reports for address {self.wallet}")
             return None
         if "last_scanned_block" in reports_by_address:
             del reports_by_address["last_scanned_block"]
@@ -60,7 +58,7 @@ class AutopayCalls:
         """Assemble feed ids 'Call' object"""
         reports = self.unwanted_timestamps_removed_for_feeds()
         if reports is None:
-            logger.info("No reports to process for feed ids call object construction")
+            logging.info("No reports to process for feed ids call object construction")
             return None
 
         calls = [
@@ -77,7 +75,7 @@ class AutopayCalls:
         """Returns feed ids for every query id"""
         calls = self.feed_ids_call()
         if calls is None:
-            logger.info("Unable to construct feed ids call")
+            logging.info("Unable to construct feed ids call")
             return None
         feeds = Multicall(calls=calls, _w3=self.w3, require_success=True)()
         feeds = {query_id: feeds[query_id] for query_id in feeds if feeds[query_id]}
@@ -100,7 +98,7 @@ class AutopayCalls:
         """Returns feed details for all feed Ids"""
         feed_ids = self.get_feed_ids()
         if feed_ids is None:
-            self.log.warning("No feed ids found in autopay")
+            logging.warning("No feed ids found in autopay")
             return None
         calls = self.feed_details_call(feed_ids)
         return Multicall(calls=calls, _w3=self.w3, require_success=True)()
@@ -151,14 +149,14 @@ class AutopayCalls:
         # get feed ids list for each query id
         feed_ids = self.get_feed_ids()
         if not feed_ids:
-            logger.info("No feed ids found in autopay")
+            logging.info("No feed ids found in autopay")
             return None, None
         # get feed details for each feed id
         feed_details_calls = self.feed_details_call(feed_ids)
         # get timestamp before and value before
         timestamps_before_calls = self.timestamps_before_call(reports=reports)
         if not feed_details_calls or not timestamps_before_calls:
-            logger.info("Unable to construct feed details Call")
+            logging.info("Unable to construct feed details Call")
             return None, None
         calls = feed_details_calls + timestamps_before_calls
         response = Multicall(calls=calls, _w3=self.w3, require_success=True)()
@@ -168,7 +166,7 @@ class AutopayCalls:
         """Check only if timestamp is first in window ie priceThreshold == zero"""
         data, reports = self.get_feed_details_and_timestamps_before_and_before_values()
         if data is None or reports is None:
-            logger.info("Unable to get feed details and timestamps before")
+            logging.info("Unable to get feed details and timestamps before")
             return None
         # separate data ease of understanding
         values: Dict[Tuple[str, str, int], bytes] = {}
@@ -221,7 +219,7 @@ class AutopayCalls:
         if reports is None:
             reports = self.unwanted_timestamps_removed_for_singles()
             if reports is None:
-                logger.info("No reports to contstruct timestamps before call")
+                logging.info("No reports to contstruct timestamps before call")
                 return None
         calls = [
             Call(
@@ -244,7 +242,7 @@ class AutopayCalls:
         if reports is None:
             reports = self.unwanted_timestamps_removed_for_singles()
             if reports is None:
-                logger.info("No reports to contstruct past tips call object")
+                logging.info("No reports to contstruct past tips call object")
                 return None
 
         calls = [
@@ -266,12 +264,12 @@ class AutopayCalls:
         """get past tips and timestamps before from autopay"""
         reports = self.unwanted_timestamps_removed_for_singles()
         if reports is None:
-            logger.info("No reports to contstruct timestamps before call")
+            logging.info("No reports to contstruct timestamps before call")
             return None
         past_tips_call = self.past_tips_call(reports)
         timestamps_before_call = self.timestamps_before_call(reports)
         if past_tips_call is None or timestamps_before_call is None:
-            logger.info("Unable to construct past tips and timestamps before call")
+            logging.info("Unable to construct past tips and timestamps before call")
             return None
         calls = past_tips_call + timestamps_before_call
         multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)()
@@ -281,7 +279,7 @@ class AutopayCalls:
     def reward_claimed_status_call(self) -> Tuple[Optional[List[Call]], Optional[Dict[Tuple[str, str], List[int]]]]:
         feeds = self.get_valid_timestamps()
         if feeds is None:
-            logger.info("No valid timestamps to check reward claimed status")
+            logging.info("No valid timestamps to check reward claimed status")
             return None, None
         calls = [
             Call(
@@ -301,7 +299,7 @@ class AutopayCalls:
     def reward_claimed_status_check(self) -> Optional[Dict[Tuple[str, str], List[int]]]:
         calls, feeds = self.reward_claimed_status_call()
         if calls is None or feeds is None:
-            logger.info("No reward claimed status call object constructed")
+            logging.info("No reward claimed status call object constructed")
             return None
         response = Multicall(calls=calls, _w3=self.w3)()
         filtered_dict = {}

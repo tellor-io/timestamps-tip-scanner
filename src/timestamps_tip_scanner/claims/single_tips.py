@@ -12,17 +12,15 @@ from web3.exceptions import ContractLogicError
 from timestamps_tip_scanner.autopay_calls import AutopayCalls
 from timestamps_tip_scanner.utils import one_time_tips
 
-logger = logging.getLogger(__name__)
-
 
 def timestamps_to_claim(apay: AutopayCalls) -> Optional[List[Dict[str, List[int]]]]:
-    reports_dict = apay.read_reports()
+    reports_dict = apay.unwanted_timestamps_removed_for_singles()
     if reports_dict is None:
-        logger.info("No reports found to check tips for")
+        logging.info("No reports found to check tips for")
         return None
     dic = apay.get_past_tips_and_timestamps_before()
     if dic is None:
-        logger.info("No past tips found to check timestamps for")
+        logging.info("No past tips found to check timestamps for")
         return None
     to_claim_lis = []
     for query_id, timestamps in reports_dict.items():
@@ -42,7 +40,7 @@ def claim_single_tips(w3: Web3, contract: Contract, account: LocalAccount) -> No
     """Claim tips for eligible OneTimeTips in Autopay contract"""
     tip_eligible_reports = timestamps_to_claim(AutopayCalls(w3, account.address, contract.address))
     if not tip_eligible_reports:
-        logger.info(f"No eligible timestamps to claim for {account.address}")
+        logging.info(f"No eligible timestamps to claim for {account.address}")
         return None
     for tip_eligible_report in tip_eligible_reports:
         for query_id, timestamps in tip_eligible_report.items():
@@ -51,7 +49,7 @@ def claim_single_tips(w3: Web3, contract: Contract, account: LocalAccount) -> No
             try:
                 gas = function_call.estimateGas({"from": account.address}, "latest")
             except ContractLogicError as e:
-                logger.info(f"Contract logic error for {query_id}-{timestamps}, error: {e}")
+                logging.info(f"Contract logic error for {query_id}-{timestamps}, error: {e}")
                 continue
             tx = function_call.buildTransaction(
                 {
@@ -62,6 +60,7 @@ def claim_single_tips(w3: Web3, contract: Contract, account: LocalAccount) -> No
             )
             signed_tx = account.sign_transaction(tx)  # type: ignore
             tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            w3.eth.wait_for_transaction_receipt(tx_hash)
-            logger.info(f"Claimed tip for {query_id} and {timestamps}")
-            logger.info(f"Tx hash: {tx_hash.hex()}")
+            receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+            logging.info(f"Claimed tip for {query_id} and {timestamps}")
+            logging.info(f"Tx hash: {tx_hash.hex()}")
+            logging.info(f"{account.address} claim transaction status: {receipt['status']}")

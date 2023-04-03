@@ -3,16 +3,13 @@ import os
 import time
 from typing import Optional
 
-from eth_utils.typing import ChecksumAddress
+from eth_typing import ChecksumAddress
 from tqdm import tqdm
 from web3 import Web3
 from web3.contract import Contract
 
 from timestamps_tip_scanner.event_scanner import EventScanner
 from timestamps_tip_scanner.jsonified_state import JSONifiedState
-
-logging.basicConfig(level=logging.INFO, format="%(message)s")
-logger = logging.getLogger(__name__)
 
 
 def run(
@@ -26,7 +23,7 @@ def run(
     """Scan the Ethereum blockchain for events and store them in a JSON file."""
 
     # Restore/create our persistent state
-    state = JSONifiedState(chain_id=chain_id, address=reporter, logger=logger)
+    state = JSONifiedState(chain_id=chain_id, address=reporter)
     if starting_block is None:
         state.restore()
     else:
@@ -52,7 +49,7 @@ def run(
 
     blocks_to_scan = end_block - start_block
 
-    logger.info(f"Scanning events from blocks {start_block} - {end_block}")
+    logging.info(f"Scanning events from blocks {start_block} - {end_block}")
 
     # Render a progress bar in the console
     start = time.time()
@@ -75,7 +72,7 @@ def run(
 
     state.save()
     duration = time.time() - start
-    logger.info(
+    logging.info(
         f"Scanned total {len(result)} TellorFlex NewReport events, in {duration} seconds, "
         f"total {total_chunks_scanned} chunk scans performed"
     )
