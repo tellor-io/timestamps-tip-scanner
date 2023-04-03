@@ -18,4 +18,8 @@ env.bak/
 venv.bak/
 env-*/
 
+# Brownie
+build/
+reports/
+scripts/
 __pycache__
