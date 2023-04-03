@@ -1,22 +1,27 @@
-from dataclasses import dataclass
-import pytest
 from collections import namedtuple
-from brownie import chain
+from dataclasses import dataclass
+
+import pytest
 from brownie import accounts
-from brownie import multicall
-from brownie import Token
-from brownie import TellorFlex
-from brownie import Governance
-from brownie import QueryDataStorage
 from brownie import Autopay
+from brownie import chain
+from brownie import Governance
+from brownie import multicall
+from brownie import QueryDataStorage
+from brownie import TellorFlex
+from brownie import Token
 from eth_account import Account
-from web3 import Web3
 from hexbytes import HexBytes
-from multicall.constants import Network, MULTICALL2_ADDRESSES, NO_STATE_OVERRIDE
+from multicall.constants import MULTICALL2_ADDRESSES
+from multicall.constants import Network
+from multicall.constants import NO_STATE_OVERRIDE
+from web3 import Web3
+
+from timestamps_tip_scanner.constants import CHAIN_ID_MAPPING
 from timestamps_tip_scanner.jsonified_state import JSONifiedState
 from timestamps_tip_scanner.logger import setup_logger
-from timestamps_tip_scanner.constants import CHAIN_ID_MAPPING
-CHAIN_ID_MAPPING[1337]= {"name": "localhost"}
+
+CHAIN_ID_MAPPING[1337] = {"name": "localhost"}
 setup_logger()
 
 contract = namedtuple("contract", "tellorflex autopay token keys")
@@ -37,10 +42,11 @@ def contracts():
         TellorFlex,
         token.address,
         43200,
-        Web3.toWei(100, 'ether'),
-        Web3.toWei(15, 'ether'),
-        Web3.toWei(10, 'ether'),
-        HexBytes("0x5c13cd9c97dbb98f2429c101a2a8150e6c7a0ddaff6124ee176a3a411067ded0"))
+        Web3.toWei(100, "ether"),
+        Web3.toWei(15, "ether"),
+        Web3.toWei(10, "ether"),
+        HexBytes("0x5c13cd9c97dbb98f2429c101a2a8150e6c7a0ddaff6124ee176a3a411067ded0"),
+    )
     # governance contract
     governance = accounts[0].deploy(Governance, tellorflex.address, token.address)
     # query data storage contract (store query data to query id mapping)
@@ -48,7 +54,7 @@ def contracts():
     # autopay contract
     autopay = accounts[0].deploy(Autopay, tellorflex.address, querydatastorage.address, 20)
     # multicall contract for making multicalls to fetch data from contracts in batch
-    multi_call = multicall.deploy({'from': accounts[0]})
+    multi_call = multicall.deploy({"from": accounts[0]})
     # set Brownie network to be supported by multicall package
     Network.Brownie = 1337
     MULTICALL2_ADDRESSES[Network.Brownie] = multi_call.address
@@ -60,21 +66,22 @@ def contracts():
 
     for acct in range(1, 7):
         # mint tokens to five accounts
-        token.mint(accounts[acct], Web3.toWei(10000, 'ether'), {'from': accounts[0]})
+        token.mint(accounts[acct], Web3.toWei(10000, "ether"), {"from": accounts[0]})
         # approve tellorflex spending for all five accounts
-        token.approve(tellorflex.address, Web3.toWei(10000, 'ether'), {'from': accounts[acct]})
+        token.approve(tellorflex.address, Web3.toWei(10000, "ether"), {"from": accounts[acct]})
         # deposit stake for all five accounts
-        tellorflex.depositStake(Web3.toWei(9000, 'ether'), {'from': accounts[acct]})
+        tellorflex.depositStake(Web3.toWei(9000, "ether"), {"from": accounts[acct]})
         # approve autopay spending for all five accounts
-        token.approve(autopay.address, Web3.toWei(10000, 'ether'), {'from': accounts[acct]})
+        token.approve(autopay.address, Web3.toWei(10000, "ether"), {"from": accounts[acct]})
         # assert remaining balance
-        assert token.balanceOf(accounts[acct]) == Web3.toWei(1000, 'ether')
+        assert token.balanceOf(accounts[acct]) == Web3.toWei(1000, "ether")
 
     return contract(tellorflex, autopay, token, BrownieAccounts())
 
 
 class CustomAccount:
     """Wrapper class for brownie and eth_account accounts for easy access to both"""
+
     def __init__(self, private_key):
         # both return LocalAccount but have different methods
         self.local_account = Account.from_key(private_key)
@@ -85,6 +92,8 @@ class CustomAccount:
             return getattr(self.local_account, name)
         if hasattr(self.brownie_account, name):
             return getattr(self.brownie_account, name)
+
+
 @dataclass
 class BrownieAccounts:
     # default "brownie" mnemonic accounts
