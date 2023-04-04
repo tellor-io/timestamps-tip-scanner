@@ -10,16 +10,17 @@ from brownie import multicall
 from brownie import QueryDataStorage
 from brownie import TellorFlex
 from brownie import Token
+from brownie import web3
 from eth_account import Account
 from hexbytes import HexBytes
 from multicall.constants import MULTICALL2_ADDRESSES
 from multicall.constants import Network
 from multicall.constants import NO_STATE_OVERRIDE
-from web3 import Web3
 
 from timestamps_tip_scanner.constants import CHAIN_ID_MAPPING
 from timestamps_tip_scanner.jsonified_state import JSONifiedState
 from timestamps_tip_scanner.logger import setup_logger
+
 
 CHAIN_ID_MAPPING[1337] = {"name": "localhost"}
 setup_logger()
@@ -33,6 +34,16 @@ def remove_jsonified_state_file():
 
 
 @pytest.fixture(scope="function")
+def w3():
+    return web3
+
+
+@pytest.fixture(scope="function")
+def autopay_contract(contracts):
+    return web3.eth.contract(address=contracts.autopay.address, abi=contracts.autopay.abi)
+
+
+@pytest.fixture(scope="function")
 def contracts():
     """Deploy all contracts in tellor and return contract instances"""
     # mock token contract
@@ -42,9 +53,9 @@ def contracts():
         TellorFlex,
         token.address,
         43200,
-        Web3.toWei(100, "ether"),
-        Web3.toWei(15, "ether"),
-        Web3.toWei(10, "ether"),
+        web3.toWei(100, "ether"),
+        web3.toWei(15, "ether"),
+        web3.toWei(10, "ether"),
         HexBytes("0x5c13cd9c97dbb98f2429c101a2a8150e6c7a0ddaff6124ee176a3a411067ded0"),
     )
     # governance contract
@@ -66,15 +77,15 @@ def contracts():
 
     for acct in range(1, 7):
         # mint tokens to five accounts
-        token.mint(accounts[acct], Web3.toWei(10000, "ether"), {"from": accounts[0]})
+        token.mint(accounts[acct], web3.toWei(10000, "ether"), {"from": accounts[0]})
         # approve tellorflex spending for all five accounts
-        token.approve(tellorflex.address, Web3.toWei(10000, "ether"), {"from": accounts[acct]})
+        token.approve(tellorflex.address, web3.toWei(10000, "ether"), {"from": accounts[acct]})
         # deposit stake for all five accounts
-        tellorflex.depositStake(Web3.toWei(9000, "ether"), {"from": accounts[acct]})
+        tellorflex.depositStake(web3.toWei(9000, "ether"), {"from": accounts[acct]})
         # approve autopay spending for all five accounts
-        token.approve(autopay.address, Web3.toWei(10000, "ether"), {"from": accounts[acct]})
+        token.approve(autopay.address, web3.toWei(10000, "ether"), {"from": accounts[acct]})
         # assert remaining balance
-        assert token.balanceOf(accounts[acct]) == Web3.toWei(1000, "ether")
+        assert token.balanceOf(accounts[acct]) == web3.toWei(1000, "ether")
 
     return contract(tellorflex, autopay, token, BrownieAccounts())
 
