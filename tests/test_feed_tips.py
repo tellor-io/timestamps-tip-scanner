@@ -1,10 +1,12 @@
-import pytest
 from unittest.mock import patch
+
+import pytest
 from brownie import chain
 from telliot_feeds.feeds import eth_usd_median_feed
+from web3 import Web3
+
 from timestamps_tip_scanner.claims.feed_tips import claim_tips
 from timestamps_tip_scanner.timestamps_scanner import run
-from web3 import Web3
 
 
 startTime = chain.time()
@@ -12,7 +14,7 @@ window = 180
 interval = 3600
 reward = int(0.5 * 10e18)
 priceThreshold = 50
-rewardIncreasePerSecond = int(0.1*1e18)
+rewardIncreasePerSecond = int(0.1 * 1e18)
 amount = int(1e18)
 feed = eth_usd_median_feed
 
@@ -29,15 +31,15 @@ def setupDataFeed(contracts):
         rewardIncreasePerSecond,
         feed.query.query_data,
         amount,
-        {"from": contracts.keys.user}
+        {"from": contracts.keys.user},
     )
+
 
 def test_claim_feed_tips(w3, autopay_contract, setupDataFeed, contracts, caplog):
     """Test claiming feed tips after submitting a report"""
-    with \
-    patch("timestamps_tip_scanner.autopay_calls.time", chain.time), \
-    patch("timestamps_tip_scanner.jsonified_state.time", chain.time), \
-    patch("timestamps_tip_scanner.event_scanner.time", chain.time):
+    with patch("timestamps_tip_scanner.autopay_calls.time", chain.time), patch(
+        "timestamps_tip_scanner.jsonified_state.time", chain.time
+    ), patch("timestamps_tip_scanner.event_scanner.time", chain.time):
         keys = contracts.keys
         # submit value from reporter-1
         contracts.tellorflex.submitValue(
@@ -51,7 +53,13 @@ def test_claim_feed_tips(w3, autopay_contract, setupDataFeed, contracts, caplog)
         # bypass wait period to claim
         chain.sleep(43202)
         #  run scanner to fetch reported timestamps
-        run(w3=w3, tellorflex_contract=contracts.tellorflex, reporter=keys.reporter1.address, chain_id=1337, starting_block=0)
+        run(
+            w3=w3,
+            tellorflex_contract=contracts.tellorflex,
+            reporter=keys.reporter1.address,
+            chain_id=1337,
+            starting_block=0,
+        )
         # claim eligible tip should be 1
         claim_tips(
             w3=w3,
@@ -67,7 +75,13 @@ def test_claim_feed_tips(w3, autopay_contract, setupDataFeed, contracts, caplog)
         )
         assert f"No eligible timestamps to claim for {keys.reporter1.address}" in caplog.text
         # try to claim for second reporter in with same window report should not be eligible
-        run(w3=w3, tellorflex_contract=contracts.tellorflex, reporter=keys.reporter2.address, chain_id=1337, starting_block=0)
+        run(
+            w3=w3,
+            tellorflex_contract=contracts.tellorflex,
+            reporter=keys.reporter2.address,
+            chain_id=1337,
+            starting_block=0,
+        )
         claim_tips(
             w3=w3,
             autopay_contract=autopay_contract,
