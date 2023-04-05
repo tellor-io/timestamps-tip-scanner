@@ -12,6 +12,8 @@ from eth_typing import ChecksumAddress
 from hexbytes import HexBytes
 from multicall import Call
 from multicall import Multicall
+from telliot_feeds.queries.query_catalog import query_catalog
+from telliot_feeds.reporters.tips.listener.funded_feeds_filter import _get_price_change
 from telliot_feeds.reporters.tips.listener.funded_feeds_filter import FundedFeedFilter
 from web3 import Web3
 
@@ -28,6 +30,38 @@ PastTipType = Union[Tuple[str, str, int], Tuple[str, str]]
 def feed_details(value: FeedDetails) -> FeedDetails:
     """Helper function to convert feed details response from multicall to FeedDetails dataclass"""
     return FeedDetails(*value)
+
+
+def decode_value(query_id: str, before_value: bytes, after_value: bytes) -> Any:
+    """Helper function to decode value from oracle response"""
+    try:
+        query = query_catalog.find(query_id=query_id)[0]
+        decoder = query.value_type.decode
+    except IndexError:
+        return None, None
+    before_val_decoded = decoder(before_value)
+    after_val_decoded = decoder(after_value)
+    if not isinstance(before_val_decoded, (float, int)) or not isinstance(after_val_decoded, (float, int)):
+        return None, None
+    return before_val_decoded, after_val_decoded
+
+
+def parse_feed_data(data: Dict[str, Any]) -> Any:
+    before_values: Dict[Tuple[str, str, int], bytes] = {}
+    current_values: Dict[Tuple[str, str, int], bytes] = {}
+    before_timestamps: Dict[Tuple[str, str, int], int] = {}
+    feeds: Dict[Tuple[str, str], FeedDetails] = {}
+    for k in data:
+        key = k[0]
+        if key == "before_values":
+            before_values[k] = data[k]
+        elif key == "timestamps":
+            before_timestamps[k] = data[k]
+        elif key == "current_values":
+            current_values[k] = data[k]
+        else:
+            feeds[k] = data[k]
+    return before_values, current_values, before_timestamps, feeds
 
 
 class AutopayCalls:
@@ -77,6 +111,7 @@ class AutopayCalls:
         if calls is None:
             logging.info("Unable to construct feed ids call")
             return None
+
         feeds = Multicall(calls=calls, _w3=self.w3, require_success=True)()
         feeds = {query_id: feeds[query_id] for query_id in feeds if feeds[query_id]}
         return feeds  # type: ignore
@@ -141,7 +176,7 @@ class AutopayCalls:
                 filtered_reports[query_id] = filtered_timestamps
         return filtered_reports
 
-    def get_feed_details_and_timestamps_before_and_before_values(
+    def get_feed_details_and_before_timestamps_and_before_values(
         self,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, List[int]]]]:
         """Fetch feed details and before timestamps and before values for all at once"""
@@ -155,32 +190,24 @@ class AutopayCalls:
         feed_details_calls = self.feed_details_call(feed_ids)
         # get timestamp before and value before
         timestamps_before_calls = self.timestamps_before_call(reports=reports)
-        if not feed_details_calls or not timestamps_before_calls:
+        value_calls = self.retrieve_data(reports=reports)
+        if not feed_details_calls or not timestamps_before_calls or not value_calls:
             logging.info("Unable to construct feed details Call")
             return None, None
-        calls = feed_details_calls + timestamps_before_calls
+
+        calls = feed_details_calls + timestamps_before_calls + value_calls
         response = Multicall(calls=calls, _w3=self.w3, require_success=True)()
         return response, reports
 
     def get_valid_timestamps(self) -> Optional[Dict[Tuple[str, str], List[int]]]:
         """Check only if timestamp is first in window ie priceThreshold == zero"""
-        data, reports = self.get_feed_details_and_timestamps_before_and_before_values()
+        data, reports = self.get_feed_details_and_before_timestamps_and_before_values()
         if data is None or reports is None:
             logging.info("Unable to get feed details and timestamps before")
             return None
-        # separate data ease of understanding
-        values: Dict[Tuple[str, str, int], bytes] = {}
-        before_timestamps: Dict[Tuple[str, str, int], int] = {}
-        feeds: Dict[Tuple[str, str], FeedDetails] = {}
+
+        before_values, current_values, before_timestamps, feeds = parse_feed_data(data)
         claim_params: Dict[Tuple[str, str], List[int]] = {}
-        for k in data:
-            key = k[0]
-            if key == "values":
-                values[k] = data[k]
-            elif key == "timestamps":
-                before_timestamps[k] = data[k]
-            else:
-                feeds[k] = data[k]
         # check window
         filtr = FundedFeedFilter()
         for query_id, feed_id in feeds:
@@ -191,7 +218,7 @@ class AutopayCalls:
                 reward_increase = feeds[(query_id, feed_id)].rewardIncreasePerSecond
                 reward_amount = feeds[(query_id, feed_id)].reward
                 balance = feeds[(query_id, feed_id)].balance
-                in_window, time_diff = filtr.is_timestamp_first_in_window(
+                first_in_window, time_diff = filtr.is_timestamp_first_in_window(
                     timestamp_before=before_timestamps[("timestamps", query_id, timestamp)],
                     timestamp_to_check=timestamp,
                     feed_start_timestamp=feeds[(query_id, feed_id)].startTime,
@@ -201,16 +228,27 @@ class AutopayCalls:
                 # check if reward amount is covered by balance
                 # taking into account reward increase
                 reward_amount += reward_increase * time_diff
-                if reward_amount < balance:
+                if balance < reward_amount:
                     break
-
-                if in_window:
+                if first_in_window:
                     # if timestamp is first in window, add to list of timestamps for (feedId,)
                     if (feed_id, query_id) not in claim_params:
                         claim_params[(feed_id, query_id)] = []
                     claim_params[(feed_id, query_id)].append(timestamp)
-                # subtract reward amount from balance for next iteration
-                balance -= reward_amount
+                    # subtract reward amount from balance for next iteration
+                    balance -= reward_amount
+                elif feeds[(query_id, feed_id)].priceThreshold > 0:
+                    before_val = before_values[("before_values", query_id, timestamp)]
+                    current_val = current_values[("current_values", query_id, timestamp)]
+                    decoded_values = decode_value(query_id, before_val, current_val)
+                    if decoded_values == (None, None):
+                        continue
+                    price_change = _get_price_change(decoded_values[0], decoded_values[1])
+                    if price_change > feeds[(query_id, feed_id)].priceThreshold:
+                        if (feed_id, query_id) not in claim_params:
+                            claim_params[(feed_id, query_id)] = []
+                        claim_params[(feed_id, query_id)].append(timestamp)
+                        balance -= reward_amount
 
         return claim_params
 
@@ -225,7 +263,25 @@ class AutopayCalls:
             Call(
                 self.autopay_address,
                 ["getDataBefore(bytes32,uint256)(bytes,uint256)", HexBytes(query_id), timestamp],
-                [[("values", query_id, timestamp), None], [("timestamps", query_id, timestamp), None]],
+                [[("before_values", query_id, timestamp), None], [("timestamps", query_id, timestamp), None]],
+            )
+            for query_id, timestamps in reports.items()
+            for timestamp in timestamps
+        ]
+        return calls
+
+    def retrieve_data(self, reports: Optional[Dict[str, List[int]]] = None) -> Optional[List[Call]]:
+        """Assemble timestamps before 'Call' object"""
+        if reports is None:
+            reports = self.unwanted_timestamps_removed_for_singles()
+            if reports is None:
+                logging.info("No reports to contstruct timestamps before call")
+                return None
+        calls = [
+            Call(
+                self.autopay_address,
+                ["retrieveData(bytes32,uint256)(bytes)", HexBytes(query_id), timestamp],
+                [[("current_values", query_id, timestamp), None]],
             )
             for query_id, timestamps in reports.items()
             for timestamp in timestamps
@@ -274,7 +330,7 @@ class AutopayCalls:
         calls = past_tips_call + timestamps_before_call
         multi_call = Multicall(calls=calls, _w3=self.w3, require_success=True)()
         # remove values from dict since not needed
-        return {key: multi_call[key] for key in multi_call if "values" not in key}
+        return {key: multi_call[key] for key in multi_call if "before_values" not in key}
 
     def reward_claimed_status_call(self) -> Tuple[Optional[List[Call]], Optional[Dict[Tuple[str, str], List[int]]]]:
         feeds = self.get_valid_timestamps()

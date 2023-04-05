@@ -28,6 +28,11 @@ setup_logger()
 contract = namedtuple("contract", "tellorflex autopay token keys")
 
 
+@pytest.fixture(scope="module", autouse=True)
+def reset_chain(chain):
+    chain.reset()
+
+
 @pytest.fixture(scope="function", autouse=True)
 def remove_jsonified_state_file():
     JSONifiedState.delete_file()

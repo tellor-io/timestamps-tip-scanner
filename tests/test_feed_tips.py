@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from brownie import chain
-from telliot_feeds.feeds import eth_usd_median_feed
+from telliot_feeds.feeds import matic_usd_median_feed
 from web3 import Web3
 
 from timestamps_tip_scanner.claims.feed_tips import claim_tips
@@ -12,11 +12,11 @@ from timestamps_tip_scanner.timestamps_scanner import run
 startTime = chain.time()
 window = 180
 interval = 3600
-reward = int(0.5 * 10e18)
+reward = int(0.5 * 1e18)
 priceThreshold = 50
-rewardIncreasePerSecond = int(0.1 * 1e18)
+rewardIncreasePerSecond = int(0.01 * 1e18)
 amount = int(1e18)
-feed = eth_usd_median_feed
+feed = matic_usd_median_feed
 
 
 @pytest.fixture(scope="function")
