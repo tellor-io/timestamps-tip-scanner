@@ -15,7 +15,7 @@ interval = 3600
 reward = int(0.5 * 1e18)
 priceThreshold = 50
 rewardIncreasePerSecond = int(0.01 * 1e18)
-amount = int(1e18)
+amount = int(10e18)
 feed = matic_usd_median_feed
 
 
@@ -88,3 +88,23 @@ def test_claim_feed_tips(w3, autopay_contract, setupDataFeed, contracts, caplog)
             account=keys.reporter2,
         )
         assert f"No eligible timestamps to claim for {keys.reporter2.address}" in caplog.text
+
+        # submit value from reporter-2 that meets the threshold
+        contracts.tellorflex.submitValue(
+            feed.query.query_id, Web3.toHex(1), 0, feed.query.query_data, {"from": keys.reporter2}
+        )
+        # bypass wait period to claim
+        chain.sleep(43201)
+        run(
+            w3=w3,
+            tellorflex_contract=contracts.tellorflex,
+            reporter=keys.reporter2.address,
+            chain_id=1337,
+            starting_block=0,
+        )
+        claim_tips(
+            w3=w3,
+            autopay_contract=autopay_contract,
+            account=keys.reporter2,
+        )
+        assert f"{keys.reporter2.address} claim transaction status: 1" in caplog.text

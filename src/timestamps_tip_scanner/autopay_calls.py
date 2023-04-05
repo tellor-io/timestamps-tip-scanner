@@ -35,7 +35,7 @@ def feed_details(value: FeedDetails) -> FeedDetails:
 def decode_value(query_id: str, before_value: bytes, after_value: bytes) -> Any:
     """Helper function to decode value from oracle response"""
     try:
-        query = query_catalog.find(query_id=query_id)[0]
+        query = query_catalog.find(query_id=query_id)[0].query
         decoder = query.value_type.decode
     except IndexError:
         return None, None
