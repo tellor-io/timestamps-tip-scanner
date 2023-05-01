@@ -1,29 +1,41 @@
-### Scan your address for timestamps that can claim tips in Autopay
-
-Concepts and a chunk of the code came from [this](https://web3py.readthedocs.io/en/stable/examples.html#example-code) example, refactored to use as a timestamp scanner
-
+### Scan timestamps for Autopay tips
 
 Steps:
-```cli
-git clone https://github.com/tellor-io/timestamps-tip-scanner.git
-cd timestamps-tip-scanner
-echo "MUMBAI_NODE = https://polygon-mumbai.g.alchemy.com/v2/<put_your_api_key_here>" >> .env
-```
-```cli
+```shell
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
 pip install -e .
 ```
-To fetch timestamps, run:
-```cli
-python src/timestamps_tip_scanner/run.py network <wallet>
+pre-requisite
+```shell
+# register address to keyfile
+chained add <choose-acct-name> <private-key>
 ```
-Supported Networks:
-- polygon
-- mumbai
+First scan oracle for your reports:
+```shell
+scanner scan <chain-id> -a <acct-name> --start-block <block-number>
+```
+Then, to claim tips:
+- one time tips:
+```shell
+scanner claim-one-time-tip <chain-id> <acct-name>
+```
+- feed tips:
+```shell
+scanner claim-tip <chain-id> -a <acct-name>
+```
+###### Supported Networks:
+- 137 (polygon)
+- 80001 (mumbai)
 
-To start at a certain block use the optional flag ```--start-block <num>```
-
+###### API
+```
+uvicorn timestamps_tip_scanner.api.main:app --reload
+```
+###### Enpoints
+```
+/reports/{chain_id}?address={address}&starting_block={starting_block}
+/feed_tips/{chain_id}?address={address}
+/tips/{chain_id}?address={address}
+```
 :warning: Disclaimer - Code hasn't been fully tested so use at own risk!
-

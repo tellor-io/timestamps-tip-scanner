@@ -1,10 +1,35 @@
+import logging
 import os
-import math
-import json
-from web3 import HTTPProvider
-from web3 import Web3
 from dataclasses import dataclass
-from web3.contract import Contract
+from typing import List
+from typing import Optional
+
+from eth_account.signers.local import LocalAccount
+from eth_typing import ChecksumAddress
+from hexbytes import HexBytes
+from web3.contract import ContractFunction
+from web3.exceptions import ContractLogicError
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Args:
+    _reporter: ChecksumAddress
+    _time: int
+    _queryId: HexBytes
+
+
+@dataclass
+class EventData:
+    address: ChecksumAddress
+    args: Args
+    blockHash: HexBytes
+    blockNumber: int
+    event: str
+    logIndex: int
+    transactionHash: HexBytes
+    transactionIndex: int
 
 
 @dataclass
@@ -29,7 +54,14 @@ class Tip:
     timestamp: int
 
 
-def fallback_input(_key: str):
+QUERYDATASTORAGEMAPPING = {
+    1: "0x96918F58e0D34DC1f69d0ef724D5207C28919010",
+    137: "0x96918F58e0D34DC1f69d0ef724D5207C28919010",
+    80001: "0x96918F58e0D34DC1f69d0ef724D5207C28919010",
+}
+
+
+def fallback_input(_key: str) -> str:
     val = os.getenv(_key, None)
     if not val:
         return input(f"{_key}:\n")
@@ -37,7 +69,7 @@ def fallback_input(_key: str):
     return val
 
 
-def one_time_tips(tips_lis: tuple, timestamp: int, timestamp_before: int):
+def one_time_tips(tips_lis: List[int], timestamp: int, timestamp_before: int) -> bool:
     """Check timestamps for one time tips"""
     count = len(tips_lis)
     if count > 0:
@@ -59,79 +91,13 @@ def one_time_tips(tips_lis: tuple, timestamp: int, timestamp_before: int):
             tips.amount > 0,
         )
         return all(conditions)
+    return False
 
 
-def is_timestamp_first_in_window(
-    timestamp_before: int,
-    timestamp_to_check: int,
-    feed_start_timestamp: int,
-    feed_window: int,
-    feed_interval: int,
-) -> bool:
-    """
-    Calculates to check if timestamp(timestamp_to_check) is first in window
-
-    Return: bool
-    """
-    # Number of intervals since start time
-    num_intervals = math.floor(
-        (timestamp_to_check - feed_start_timestamp) / feed_interval
-    )
-    # Start time of latest submission window
-    current_window_start = feed_start_timestamp + (feed_interval * num_intervals)
-    if timestamp_before is None:
-        timestamp_before = 0
-    eligible = [
-        (timestamp_to_check - current_window_start) < feed_window,
-        timestamp_before < current_window_start,
-    ]
-    return all(eligible)
-
-
-def evm_transaction(
-    contract_factory: Contract,
-    func_name: str,
-    w3: Web3,
-    wallet_address: str,
-    private_key: str,
-    **kwargs,
-):
-    gas = int(os.getenv("GAS", 400000))
-    gas_multiplier = int(os.getenv("GAS_MULTIPLIER", 2))
-
-    wallet_nonce = w3.eth.get_transaction_count(wallet_address)
-    txn_build = contract_factory.get_function_by_name(func_name)(
-        **kwargs
-    ).buildTransaction(
-        dict(
-            nonce=int(wallet_nonce),
-            gasPrice=int(w3.eth.gas_price * gas_multiplier),
-            gas=gas,
-        )
-    )
-    signed_txn = w3.eth.account.signTransaction(txn_build, private_key)
-    # Send the transaction
-    transaction_hash = w3.eth.sendRawTransaction(signed_txn.rawTransaction)
-    transaction_hash = transaction_hash.hex()
-    print(f"{func_name} txn: {transaction_hash}")
-    receipt = w3.eth.wait_for_transaction_receipt(transaction_hash, timeout=480)
-    return receipt
-
-
-def autopay_factory(address: str, w3: Web3):
-    with open("abi/autopay.json") as f:
-        autopay_abi = json.load(f)
-
-    return w3.eth.contract(address=address, abi=autopay_abi)
-
-
-def w3_instance(node_url):
-
-    provider = HTTPProvider(node_url)
-
-    # Remove the default JSON-RPC retry middleware
-    # as it correctly cannot handle eth_getLogs block range
-    # throttle down.
-    provider.middlewares.clear()
-
-    return Web3(provider)
+def gas_estimate(function_call: ContractFunction, account: LocalAccount) -> Optional[int]:
+    """See if a transaction will by trying to estimate gas for a transaction"""
+    try:
+        return function_call.estimateGas({"from": account.address}, "latest")
+    except ContractLogicError as e:
+        logger.info(f"Contract logic error {function_call}: {e}")
+        return None

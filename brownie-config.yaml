@@ -1,0 +1,6 @@
+networks:
+  default: development
+  development:
+    timeout: 600
+dependencies:
+    - OpenZeppelin/openzeppelin-contracts@4.5.0

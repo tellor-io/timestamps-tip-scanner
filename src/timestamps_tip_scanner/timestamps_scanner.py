@@ -1,68 +1,46 @@
-import json
-import time
+import logging
 import os
+import time
+from typing import Optional
 
+from eth_typing import ChecksumAddress
 from tqdm import tqdm
+from web3 import Web3
+from web3.contract import Contract
+
 from timestamps_tip_scanner.event_scanner import EventScanner
 from timestamps_tip_scanner.jsonified_state import JSONifiedState
-from timestamps_tip_scanner.utils import w3_instance
-from timestamps_tip_scanner.constants import Networks
-from pathlib import Path
 
 
-
-def run(network, reporter=None, starting_block=None):
-
-    api_url = Networks[network].api_node
-    tellorflex_address = Networks[network].oracle_address
-    print(f"Tellorflex address: {tellorflex_address}")
-
-    w3 = w3_instance(api_url)
-    # Prepare contract object
-    # Read contract ABIs from json files
-    _abi_folder = Path(__file__).resolve().parent / "abi"
-
-    with open(f"{_abi_folder}/tellorflex.json") as tellorflex_abi:
-        tellorflex_abi = json.load(tellorflex_abi)
-
-    tellorflex_contract = w3.eth.contract(
-        address=tellorflex_address, abi=tellorflex_abi
-    )
+def run(
+    *,
+    w3: Web3,
+    reporter: ChecksumAddress,
+    tellorflex_contract: Contract,
+    chain_id: int,
+    starting_block: Optional[int] = None,
+) -> JSONifiedState:
+    """Scan the Ethereum blockchain for events and store them in a JSON file."""
 
     # Restore/create our persistent state
-    state = JSONifiedState()
-    state.reset(network,starting_block)
+    state = JSONifiedState(chain_id=chain_id, address=reporter)
+    if starting_block is None:
+        state.restore()
+    else:
+        state.reset(starting_block)
 
-    try:
-        max_batch_scan_size = int(os.getenv("BATCH_SIZE", 3499))
-    except ValueError:
-        max_batch_scan_size = 3499
-        print(
-            f"Unable to read env variable, using default batch size: {max_batch_scan_size}"
-        )
+    max_batch_scan_size = int(os.getenv("BATCH_SIZE", 100000))
 
-    # chain_id: int, web3: Web3, abi: dict, state: EventScannerState, events: List, filters: {}, max_chunk_scan_size: int=10000
     scanner = EventScanner(
         web3=w3,
         state=state,
         reporter=reporter,
         contract=tellorflex_contract,
         events=[tellorflex_contract.events.NewReport],
-        filters={"address": tellorflex_address},
+        filters={"address": tellorflex_contract.address},
         # Infura max block ranger
         max_chunk_scan_size=max_batch_scan_size,
     )
-
-    # Assume we might have scanned the blocks all the way to the last Ethereum block
-    # that mined a few seconds before the previous scan run ended.
-    # Because there might have been a minor Etherueum chain reorganisations
-    # since the last scan ended, we need to discard
-    # the last few blocks from the previous scan results.
-    chain_reorg_safety_blocks = 10
-    scanner.delete_potentially_forked_block_data(
-        state.get_last_scanned_block() - chain_reorg_safety_blocks
-    )
-
     # Scan from [last block scanned] - [latest ethereum block]
     # Note that our chain reorg safety blocks cannot go negative
 
@@ -71,15 +49,16 @@ def run(network, reporter=None, starting_block=None):
 
     blocks_to_scan = end_block - start_block
 
-    print(f"Scanning events from blocks {start_block} - {end_block}")
+    logging.info(f"Scanning events from blocks {start_block} - {end_block}")
 
     # Render a progress bar in the console
     start = time.time()
     with tqdm(total=blocks_to_scan) as progress_bar:
 
-        def _update_progress(start, end, current, chunk_size, events_count):
+        def _update_progress(current: int, chunk_size: int, events_count: int) -> None:
             progress_bar.set_description(
-                f"Current block: {current}, blocks in a scan batch: {chunk_size}, events processed in a batch {events_count}"
+                f"Current block: {current}, "
+                f"blocks in a scan batch: {chunk_size}, events processed in a batch {events_count}"
             )
             progress_bar.update(chunk_size)
 
@@ -93,9 +72,9 @@ def run(network, reporter=None, starting_block=None):
 
     state.save()
     duration = time.time() - start
-    print(
-        f"Scanned total {len(result)} TellorFlex NewReport events, in {duration} seconds, total {total_chunks_scanned} chunk scans performed"
+    logging.info(
+        f"Scanned total {len(result)} TellorFlex NewReport events, in {duration} seconds, "
+        f"total {total_chunks_scanned} chunk scans performed"
     )
 
     return state
-
