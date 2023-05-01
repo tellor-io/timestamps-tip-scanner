@@ -54,13 +54,6 @@ class Tip:
     timestamp: int
 
 
-QUERYDATASTORAGEMAPPING = {
-    1: "0x96918F58e0D34DC1f69d0ef724D5207C28919010",
-    137: "0x96918F58e0D34DC1f69d0ef724D5207C28919010",
-    80001: "0x96918F58e0D34DC1f69d0ef724D5207C28919010",
-}
-
-
 def fallback_input(_key: str) -> str:
     val = os.getenv(_key, None)
     if not val:
