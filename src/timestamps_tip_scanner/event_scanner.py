@@ -1,3 +1,8 @@
+"""
+Concepts and a chunk of the code came from the following example,
+https://web3py.readthedocs.io/en/stable/examples.html#example-code,
+refactored to use as a reports scanner
+"""
 import logging
 from time import sleep
 from time import time

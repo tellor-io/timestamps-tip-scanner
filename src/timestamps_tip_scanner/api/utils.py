@@ -7,7 +7,7 @@ from telliot_core.apps.telliot_config import TelliotConfig
 from telliot_core.directory import contract_directory
 from telliot_core.directory import ContractInfo
 from telliot_core.model.endpoints import RPCEndpoint
-from web3 import Web3
+from telliot_core.tellor.tellor360.autopay import Tellor360AutopayContract
 
 from timestamps_tip_scanner.autopay_calls import AutopayCalls
 from timestamps_tip_scanner.jsonified_state import JSONifiedState
@@ -19,13 +19,12 @@ node_url = os.getenv("NODE_URL", None)
 cfg = TelliotConfig()
 
 
-def w3_connection(chain_id: int) -> Web3:
+def connect_endpoint(chain_id: int) -> RPCEndpoint:
     cfg.main.chain_id = chain_id
     endpoint = RPCEndpoint(chain_id=chain_id, url=node_url)
     if not endpoint.connect():
         raise Exception(f"Could not connect to endpoint {endpoint}")
-    w3 = endpoint._web3
-    return w3  # type: ignore
+    return endpoint
 
 
 def fetch_contract(chain_id: int, name: str) -> ContractInfo:
@@ -33,13 +32,17 @@ def fetch_contract(chain_id: int, name: str) -> ContractInfo:
 
 
 def autopay(chain_id: int, wallet: str) -> AutopayCalls:
-    w3 = w3_connection(chain_id)
-    autopay_address = fetch_contract(chain_id, "tellor360-autopay").address[chain_id]
-    return AutopayCalls(w3=w3, wallet=to_checksum_address(wallet), autopay_address=autopay_address)
+    endpoint = connect_endpoint(chain_id)
+
+    class Account:
+        address = wallet
+
+    tellor_autopay = Tellor360AutopayContract(node=endpoint, account=Account)
+    return AutopayCalls(tellor_autopay)
 
 
 def fetch_data(chain_id: int, address: str, starting_block: Optional[int]) -> JSONifiedState:
-    w3 = w3_connection(chain_id=chain_id)
+    w3 = connect_endpoint(chain_id)._web3
     contract_info = fetch_contract(chain_id, "tellor360-oracle")
     if not contract_info:
         raise Exception(f"Tellorflex not found in telliot on chain_id {chain_id}\nCheck supported tellor chain ids")

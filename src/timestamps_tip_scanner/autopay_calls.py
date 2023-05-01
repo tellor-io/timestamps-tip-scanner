@@ -1,3 +1,4 @@
+import ast
 import json
 import logging
 from time import time
@@ -8,42 +9,46 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-from eth_typing import ChecksumAddress
+from eth_abi import decode_single
 from hexbytes import HexBytes
 from multicall import Call
 from multicall import Multicall
+from telliot_core.tellor.tellor360.autopay import Tellor360AutopayContract
 from telliot_feeds.queries.query_catalog import query_catalog
 from telliot_feeds.reporters.tips.listener.funded_feeds_filter import _get_price_change
 from telliot_feeds.reporters.tips.listener.funded_feeds_filter import FundedFeedFilter
-from web3 import Web3
 
 from timestamps_tip_scanner.constants import CHAIN_ID_MAPPING
 from timestamps_tip_scanner.constants import FOUR_WEEKS
 from timestamps_tip_scanner.constants import REPORTS_FILENAME
 from timestamps_tip_scanner.constants import TWELVE_HOURS
 from timestamps_tip_scanner.utils import FeedDetails
+from timestamps_tip_scanner.utils import QUERYDATASTORAGEMAPPING
 
 
 PastTipType = Union[Tuple[str, str, int], Tuple[str, str]]
 
 
+def decode_typ_name(qdata: bytes) -> str:
+    """Decode query type name from query data
+
+    Args:
+    - qdata: query data in bytes
+
+    Return: string query type name
+    """
+    qtype_name: str
+    try:
+        qtype_name, _ = decode_single("(string,bytes)", qdata)
+    except OverflowError:
+        # string query for some reason encoding isn't the same as the others
+        qtype_name = ast.literal_eval(qdata.decode("utf-8"))["type"]
+    return qtype_name
+
+
 def feed_details(value: FeedDetails) -> FeedDetails:
     """Helper function to convert feed details response from multicall to FeedDetails dataclass"""
     return FeedDetails(*value)
-
-
-def decode_value(query_id: str, before_value: bytes, after_value: bytes) -> Any:
-    """Helper function to decode value from oracle response"""
-    try:
-        query = query_catalog.find(query_id=query_id)[0].query
-        decoder = query.value_type.decode
-    except IndexError:
-        return None, None
-    before_val_decoded = decoder(before_value)
-    after_val_decoded = decoder(after_value)
-    if not isinstance(before_val_decoded, (float, int)) or not isinstance(after_val_decoded, (float, int)):
-        return None, None
-    return before_val_decoded, after_val_decoded
 
 
 def parse_feed_data(data: Dict[str, Any]) -> Any:
@@ -65,11 +70,12 @@ def parse_feed_data(data: Dict[str, Any]) -> Any:
 
 
 class AutopayCalls:
-    def __init__(self, w3: Web3, wallet: ChecksumAddress, autopay_address: ChecksumAddress) -> None:
-        self.w3 = w3
-        self.wallet = wallet
-        self.autopay_address = autopay_address
-        self.chain_name = CHAIN_ID_MAPPING[self.w3.eth.chain_id]["name"]
+    def __init__(self, autopay_contract: Tellor360AutopayContract) -> None:
+        self.w3 = autopay_contract.node._web3
+        self.chain_id = autopay_contract.node.chain_id
+        self.wallet = self.w3.toChecksumAddress(autopay_contract.account.address)
+        self.autopay_address = autopay_contract.address
+        self.chain_name = CHAIN_ID_MAPPING[self.chain_id]["name"]
         with open(REPORTS_FILENAME, "r") as f:
             self.reports: Dict[str, Dict[str, Dict[str, Union[int, List[int]]]]] = json.load(f)
 
@@ -87,6 +93,45 @@ class AutopayCalls:
         if "last_scanned_time" in reports_by_address:
             del reports_by_address["last_scanned_time"]
         return reports_by_address  # type: ignore
+
+    def get_query_type(self, query_id: str) -> Optional[str]:
+        """Helper function to get query data from storage contract"""
+        abi = [
+            {
+                "inputs": [{"internalType": "bytes32", "name": "_queryId", "type": "bytes32"}],
+                "name": "getQueryData",
+                "outputs": [{"internalType": "bytes", "name": "_queryData", "type": "bytes"}],
+                "stateMutability": "view",
+                "type": "function",
+            }
+        ]
+        try:
+            storage_contract = self.w3.eth.contract(address=QUERYDATASTORAGEMAPPING[self.chain_id], abi=abi)
+            query_data = storage_contract.functions.getQueryData(query_id).call()
+            query_type = decode_typ_name(query_data)
+        except Exception as e:
+            logging.debug(f"Failed to get query type for query id {query_id}: {e}")
+            return None
+        return query_type
+
+    def decode_value(self, query_id: str, before_value: bytes, after_value: bytes) -> Any:
+        """Helper function to decode value from oracle response"""
+        in_catalog = query_catalog.find(query_id=query_id)
+        if not in_catalog:
+            # attempt to get query data from storage contract
+            query_type = self.get_query_type(query_id=query_id)
+            if query_type is None:
+                return None, None
+            in_catalog = query_catalog.find(query_type=query_type)
+        try:
+            decoder = in_catalog[0].query.value_type.decode
+        except IndexError:
+            return None, None
+        before_val_decoded = decoder(before_value)
+        after_val_decoded = decoder(after_value)
+        if not isinstance(before_val_decoded, (float, int)) or not isinstance(after_val_decoded, (float, int)):
+            return None, None
+        return before_val_decoded, after_val_decoded
 
     def feed_ids_call(self) -> Optional[List[Call]]:
         """Assemble feed ids 'Call' object"""
@@ -240,7 +285,7 @@ class AutopayCalls:
                 elif feeds[(query_id, feed_id)].priceThreshold > 0:
                     before_val = before_values[("before_values", query_id, timestamp)]
                     current_val = current_values[("current_values", query_id, timestamp)]
-                    decoded_values = decode_value(query_id, before_val, current_val)
+                    decoded_values = self.decode_value(query_id, before_val, current_val)
                     if decoded_values == (None, None):
                         continue
                     price_change = _get_price_change(decoded_values[0], decoded_values[1])
@@ -368,20 +413,25 @@ class AutopayCalls:
 
 
 if __name__ == "__main__":
-    from eth_utils import to_checksum_address
+    from telliot_core.model.endpoints import RPCEndpoint
+    import os
+    from dotenv import load_dotenv
 
-    feed_filter = FundedFeedFilter()
-    web3 = Web3(Web3.HTTPProvider("https://rpc-mumbai.maticvigil.com/"))
-    address = to_checksum_address("0xd5f1Cc896542C111c7Aa7D7fae2C3D654f34b927")
-    apay = to_checksum_address("0x9BE9B0CFA89Ea800556C6efbA67b455D336db1D0")
-    apay_calls = AutopayCalls(w3=web3, wallet=address, autopay_address=apay)
-    # print(apay_calls.read_reports())
-    # OneTimeTips
-    # reports = apay_calls.unwanted_timestamps_removed_for_singles()
-    # calls = apay_calls.past_tips_call(reports) + apay_calls.timestamps_before_call(reports)
-    # print(apay_calls.get_past_tips_and_timestamps_before())
-    # FeedTips
-    # print(apay_calls.get_feed_ids())
-    # print(apay_calls.get_feed_details())
-    # print(apay_calls.get_valid_timestamps())
-    # print(apay_calls.reward_claimed_status_check())
+    load_dotenv()
+    node = RPCEndpoint(
+        network="mumbai",
+        url=os.environ.get("NODE_URL"),
+        chain_id=80001,
+    )
+    node.connect()
+
+    class Account:
+        address = "0xd5f1Cc896542C111c7Aa7D7fae2C3D654f34b927"
+
+    tellor_autopay = Tellor360AutopayContract(node=node, account=Account)
+    tellor_autopay.connect()
+    apay_calls = AutopayCalls(autopay_contract=tellor_autopay)
+    query_type = apay_calls.get_query_type(
+        query_id="0x9026839f0ed5b30c73fd0a6046e3ade4e04c94c5e8c982089205109de74b0553"
+    )
+    print(query_type)

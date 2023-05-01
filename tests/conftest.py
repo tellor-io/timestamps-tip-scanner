@@ -11,16 +11,20 @@ from brownie import QueryDataStorage
 from brownie import TellorFlex
 from brownie import Token
 from brownie import web3
+from chained_accounts import ChainedAccount
 from eth_account import Account
 from hexbytes import HexBytes
 from multicall.constants import MULTICALL2_ADDRESSES
 from multicall.constants import Network
 from multicall.constants import NO_STATE_OVERRIDE
+from telliot_core.directory import ContractInfo
+from telliot_core.model.endpoints import RPCEndpoint
+from telliot_core.tellor.tellor360.autopay import contract_directory
+from telliot_core.tellor.tellor360.autopay import Tellor360AutopayContract
 
 from timestamps_tip_scanner.constants import CHAIN_ID_MAPPING
 from timestamps_tip_scanner.jsonified_state import JSONifiedState
 from timestamps_tip_scanner.logger import setup_logger
-
 
 CHAIN_ID_MAPPING[1337] = {"name": "localhost"}
 setup_logger()
@@ -36,16 +40,6 @@ def reset_chain(chain):
 @pytest.fixture(scope="function", autouse=True)
 def remove_jsonified_state_file():
     JSONifiedState.delete_file()
-
-
-@pytest.fixture(scope="function")
-def w3():
-    return web3
-
-
-@pytest.fixture(scope="function")
-def autopay_contract(contracts):
-    return web3.eth.contract(address=contracts.autopay.address, abi=contracts.autopay.abi)
 
 
 @pytest.fixture(scope="function")
@@ -121,3 +115,65 @@ class BrownieAccounts:
     reporter5 = CustomAccount("0xb591fb79dd7065964210e7e527c87f97523da07ef8d16794f09750d5eef959b5")
     # accounts[6]
     user = CustomAccount("0xfe613f76efbfd03a16624ed8d96777966770f353e83d6f7611c11fdfcdfa48d1")
+
+
+@pytest.fixture(scope="function")
+def tellor_autopay(contracts):
+    entry_name = "tellor360-autopay"  # Replace this with the actual name of the contract you want to modify
+    original_entry = contract_directory.entries[entry_name]
+
+    modified_entry = ContractInfo(
+        name=original_entry.name,
+        org=original_entry.org,
+        address={**original_entry.address, 1337: contracts.autopay.address},
+        abi_file=original_entry.abi_file,
+    )
+    contract_directory.entries[entry_name] = modified_entry
+    account = ChainedAccount("timestamps_tip_scanner_account_0")
+    node = RPCEndpoint(
+        url="http://localhost:8545",
+        network="brownie",
+        chain_id=1337,
+    )
+    node.connect()
+    autopay = Tellor360AutopayContract(node=node, account=account)
+
+    autopay.connect()
+    return autopay
+
+
+@pytest.fixture(scope="module", autouse=True)
+def accts():
+    accounts = [
+        "timestamps_tip_scanner_account_0",
+        "timestamps_tip_scanner_account_1",
+        "timestamps_tip_scanner_account_2",
+        "timestamps_tip_scanner_account_3",
+        "timestamps_tip_scanner_account_4",
+        "timestamps_tip_scanner_account_5",
+        "timestamps_tip_scanner_account_6",
+    ]
+    for acct in accounts:
+        account = ChainedAccount(acct)
+        if account.keyfile.exists():
+            continue
+        ChainedAccount.add(acct, 1337, PKMAPPING[acct], "")
+
+    yield
+    # delete accounts after tests are finished
+    for acct in accounts:
+        account = ChainedAccount(acct)
+        if not account.keyfile.exists():
+            continue
+        account.delete()
+
+
+PKMAPPING = {
+    "timestamps_tip_scanner_account_0": "0xbbfbee4961061d506ffbb11dfea64eba16355cbf1d9c29613126ba7fec0aed5d",
+    "timestamps_tip_scanner_account_1": "0x804365e293b9fab9bd11bddd39082396d56d30779efbb3ffb0a6089027902c4a",
+    "timestamps_tip_scanner_account_2": "0x1f52464c2fb44e9b7e0808f2c5fe56d87b73eb3bca0e72c66f9f74d7c6c9a81f",
+    "timestamps_tip_scanner_account_3": "0x905e216d8acdabbd095f11162327c5e6e80cc59a51283732cd4fe1299b33b7a6",
+    "timestamps_tip_scanner_account_4": "0xe21bbdc4c57125bec3e05467423dfc3da8754d862140550fc7b3d2833ad1bdeb",
+    "timestamps_tip_scanner_account_5": "0xb591fb79dd7065964210e7e527c87f97523da07ef8d16794f09750d5eef959b5",
+    "timestamps_tip_scanner_account_6": "0xfe613f76efbfd03a16624ed8d96777966770f353e83d6f7611c11fdfcdfa48d1",
+}

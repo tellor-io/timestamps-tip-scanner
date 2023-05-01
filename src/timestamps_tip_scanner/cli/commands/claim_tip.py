@@ -4,7 +4,7 @@ import click
 from chained_accounts import find_accounts
 from eth_account import Account
 from telliot_core.apps.telliot_config import TelliotConfig
-from telliot_core.directory import contract_directory
+from telliot_core.tellor.tellor360.autopay import Tellor360AutopayContract
 from telliot_core.utils.key_helpers import lazy_unlock_account
 
 from timestamps_tip_scanner.claims.feed_tips import claim_tips
@@ -42,8 +42,8 @@ def claim_tip(chain_id: int, account: str, private_key: str) -> None:
             raise click.BadOptionUsage(
                 option_name="private_key/account", message="private key or account name required"
             )
+        acct = accounts[0]
         lazy_unlock_account(accounts[0])
-        acct = accounts[0].local_account
 
     cfg.main.chain_id = chain_id
     endpoints = cfg.endpoints.find(chain_id=chain_id)
@@ -57,14 +57,7 @@ def claim_tip(chain_id: int, account: str, private_key: str) -> None:
             f"Could not connect to endpoint for {chain_id}\n"
             "Please check your ~/telliot/endpoints.yaml file and try again"
         )
-    w3 = endpoint._web3
-    contract_info = contract_directory.find(chain_id=chain_id, name="tellor360-autopay")
-    if not contract_info:
-        raise click.BadArgumentUsage(
-            f"Tellorflex not found in telliot on chain_id {chain_id}\nCheck supported tellor chain ids"
-        )
-
-    autopay_address = contract_info[0].address[chain_id]
-    abi = contract_info[0].get_abi(chain_id=chain_id)
-    autopay_contract = w3.eth.contract(address=autopay_address, abi=abi)
-    claim_tips(w3, autopay_contract, acct)
+    autopay_contract = Tellor360AutopayContract(node=endpoint, account=acct)
+    if not autopay_contract.connect():
+        raise click.BadArgumentUsage(f"Could not connect to autopay contract for {chain_id}\n")
+    claim_tips(autopay_contract)

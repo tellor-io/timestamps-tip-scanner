@@ -1,9 +1,16 @@
+import logging
 import os
 from dataclasses import dataclass
 from typing import List
+from typing import Optional
 
+from eth_account.signers.local import LocalAccount
 from eth_typing import ChecksumAddress
 from hexbytes import HexBytes
+from web3.contract import ContractFunction
+from web3.exceptions import ContractLogicError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -47,6 +54,13 @@ class Tip:
     timestamp: int
 
 
+QUERYDATASTORAGEMAPPING = {
+    1: "0x96918F58e0D34DC1f69d0ef724D5207C28919010",
+    137: "0x96918F58e0D34DC1f69d0ef724D5207C28919010",
+    80001: "0x96918F58e0D34DC1f69d0ef724D5207C28919010",
+}
+
+
 def fallback_input(_key: str) -> str:
     val = os.getenv(_key, None)
     if not val:
@@ -78,3 +92,12 @@ def one_time_tips(tips_lis: List[int], timestamp: int, timestamp_before: int) ->
         )
         return all(conditions)
     return False
+
+
+def gas_estimate(function_call: ContractFunction, account: LocalAccount) -> Optional[int]:
+    """See if a transaction will by trying to estimate gas for a transaction"""
+    try:
+        return function_call.estimateGas({"from": account.address}, "latest")
+    except ContractLogicError as e:
+        logger.info(f"Contract logic error {function_call}: {e}")
+        return None
