@@ -81,6 +81,7 @@ class AutopayCalls:
     def reports(self) -> Dict[str, Dict[str, Dict[str, Union[int, List[int]]]]]:
         with open(REPORTS_FILENAME, "r") as f:
             return json.load(f)
+
     def read_reports(self) -> Optional[Dict[str, List[int]]]:
         reports_by_chain = self.reports.get(self.chain_name)
         if reports_by_chain is None:

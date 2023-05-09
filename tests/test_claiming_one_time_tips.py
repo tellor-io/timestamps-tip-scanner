@@ -8,9 +8,10 @@ from telliot_feeds.feeds import eth_usd_median_feed
 from telliot_feeds.feeds import ric_usd_median_feed
 from telliot_feeds.feeds import trb_usd_median_feed
 from web3 import Web3
-from timestamps_tip_scanner.autopay_calls import AutopayCalls
 
-from timestamps_tip_scanner.claims.single_tips import claim_single_tips, timestamps_to_claim
+from timestamps_tip_scanner.autopay_calls import AutopayCalls
+from timestamps_tip_scanner.claims.single_tips import claim_single_tips
+from timestamps_tip_scanner.claims.single_tips import timestamps_to_claim
 from timestamps_tip_scanner.timestamps_scanner import run
 
 
@@ -95,7 +96,7 @@ def test_single_reporter_multiple_tips(contracts, tellor_autopay, caplog):
     # advance block chain
     chain.mine(timedelta=1)
     tellorflex.submitValue(query.query_id, Web3.toHex(1800), 0, query.query_data, {"from": keys.reporter1})
-    
+
     # tip 2 and submission
     query = eth_usd_median_feed.query
     autopay.tip(query.query_id, Web3.toWei(1, "ether"), query.query_data, {"from": keys.user})
@@ -113,14 +114,15 @@ def test_single_reporter_multiple_tips(contracts, tellor_autopay, caplog):
     # advance block chain
     chain.mine(timedelta=1)
     # scan for reported timestamps
-    scan = run(w3=w3,
+    scan = run(
+        w3=w3,
         tellorflex_contract=contracts.tellorflex,
         reporter=keys.reporter1.address,
         chain_id=1337,
         starting_block=0,
     )
-    reports = scan.state['localhost'][keys.reporter1.address]
-    assert reports['last_scanned_block'] == w3.eth.blockNumber - 1
+    reports = scan.state["localhost"][keys.reporter1.address]
+    assert reports["last_scanned_block"] == w3.eth.blockNumber - 1
     assert HexBytes(btc_usd_median_feed.query.query_id).hex() in reports
     assert HexBytes(eth_usd_median_feed.query.query_id).hex() in reports
     assert HexBytes(ric_usd_median_feed.query.query_id).hex() in reports
@@ -140,4 +142,3 @@ def test_single_reporter_multiple_tips(contracts, tellor_autopay, caplog):
         assert f"Claimed tip for {HexBytes(btc_usd_median_feed.query.query_id).hex()}" in caplog.text
         assert f"Claimed tip for {HexBytes(eth_usd_median_feed.query.query_id).hex()}" in caplog.text
         assert f"Claimed tip for {HexBytes(ric_usd_median_feed.query.query_id).hex()}" in caplog.text
-    
