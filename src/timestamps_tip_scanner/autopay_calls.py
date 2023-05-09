@@ -20,10 +20,10 @@ from telliot_feeds.reporters.tips.listener.funded_feeds_filter import FundedFeed
 
 from timestamps_tip_scanner.constants import CHAIN_ID_MAPPING
 from timestamps_tip_scanner.constants import FOUR_WEEKS
+from timestamps_tip_scanner.constants import QUERYDATASTORAGEMAPPING
 from timestamps_tip_scanner.constants import REPORTS_FILENAME
 from timestamps_tip_scanner.constants import TWELVE_HOURS
 from timestamps_tip_scanner.utils import FeedDetails
-from timestamps_tip_scanner.utils import QUERYDATASTORAGEMAPPING
 
 
 PastTipType = Union[Tuple[str, str, int], Tuple[str, str]]
@@ -76,9 +76,11 @@ class AutopayCalls:
         self.wallet = self.w3.toChecksumAddress(autopay_contract.account.address)
         self.autopay_address = autopay_contract.address
         self.chain_name = CHAIN_ID_MAPPING[self.chain_id]["name"]
-        with open(REPORTS_FILENAME, "r") as f:
-            self.reports: Dict[str, Dict[str, Dict[str, Union[int, List[int]]]]] = json.load(f)
 
+    @property
+    def reports(self) -> Dict[str, Dict[str, Dict[str, Union[int, List[int]]]]]:
+        with open(REPORTS_FILENAME, "r") as f:
+            return json.load(f)
     def read_reports(self) -> Optional[Dict[str, List[int]]]:
         reports_by_chain = self.reports.get(self.chain_name)
         if reports_by_chain is None:
@@ -125,9 +127,11 @@ class AutopayCalls:
             in_catalog = query_catalog.find(query_type=query_type)
         try:
             decoder = in_catalog[0].query.value_type.decode
+            print(decoder)
         except IndexError:
             return None, None
         before_val_decoded = decoder(before_value)
+        print(before_val_decoded)
         after_val_decoded = decoder(after_value)
         if not isinstance(before_val_decoded, (float, int)) or not isinstance(after_val_decoded, (float, int)):
             return None, None
