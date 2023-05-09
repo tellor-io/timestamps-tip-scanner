@@ -29,7 +29,7 @@ from timestamps_tip_scanner.logger import setup_logger
 CHAIN_ID_MAPPING[1337] = {"name": "localhost"}
 setup_logger()
 
-contract = namedtuple("contract", "tellorflex autopay token keys")
+contract = namedtuple("contract", "tellorflex autopay token querydatastorage keys")
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -86,7 +86,7 @@ def contracts():
         # assert remaining balance
         assert token.balanceOf(accounts[acct]) == web3.toWei(1000, "ether")
 
-    return contract(tellorflex, autopay, token, BrownieAccounts())
+    return contract(tellorflex, autopay, token, querydatastorage, BrownieAccounts())
 
 
 class CustomAccount:
