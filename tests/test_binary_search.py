@@ -9,7 +9,6 @@ def test_empty_list():
     """Test no tips in list"""
     timestamp = time.time()
     timestamp_before = time.time() - 100
-    print(one_time_tips(tips_lis, timestamp, timestamp_before))
     # should return false
     assert not one_time_tips([], timestamp, timestamp_before)
 

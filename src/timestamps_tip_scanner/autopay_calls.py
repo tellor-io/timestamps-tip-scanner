@@ -128,11 +128,9 @@ class AutopayCalls:
             in_catalog = query_catalog.find(query_type=query_type)
         try:
             decoder = in_catalog[0].query.value_type.decode
-            print(decoder)
         except IndexError:
             return None, None
         before_val_decoded = decoder(before_value)
-        print(before_val_decoded)
         after_val_decoded = decoder(after_value)
         if not isinstance(before_val_decoded, (float, int)) or not isinstance(after_val_decoded, (float, int)):
             return None, None
@@ -439,4 +437,3 @@ if __name__ == "__main__":
     query_type = apay_calls.get_query_type(
         query_id="0x9026839f0ed5b30c73fd0a6046e3ade4e04c94c5e8c982089205109de74b0553"
     )
-    print(query_type)
