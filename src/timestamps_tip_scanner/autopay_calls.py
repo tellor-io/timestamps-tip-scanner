@@ -352,7 +352,7 @@ class AutopayCalls:
         calls = [
             Call(
                 self.autopay_address,
-                ["getPastTips(bytes32)((uint256,uint256)[])", HexBytes(query_id)],
+                ["getPastTips(bytes32)((uint256,uint256,uint256)[])", HexBytes(query_id)],
                 [[("past_tips", query_id), None]],
             )
             for query_id in reports

@@ -52,6 +52,7 @@ class Tip:
 
     amount: int
     timestamp: int
+    cumulative: int
 
 
 def fallback_input(_key: str) -> str:
