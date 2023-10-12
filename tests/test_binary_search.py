@@ -2,7 +2,7 @@ import time
 
 from timestamps_tip_scanner.utils import one_time_tips
 
-tips_lis = [(1000000000000000000, 1683037267), (2000000000000000000, 1683037268), (3000000000000000000, 1683037269)]
+tips_lis = [(1000000000000000000, 1683037267, 1000000000000000000), (2000000000000000000, 1683037268, 3000000000000000000), (3000000000000000000, 1683037269, 6000000000000000000)]
 
 
 def test_empty_list():
@@ -39,7 +39,7 @@ def test_valid_timestamps():
 
 def test_zero_tip_amount():
     """Test when tip amount is zero but timestamp is valid"""
-    tips_lis = [(0, 1683037271)]
+    tips_lis = [(0, 1683037271, 0)]
     timestamp = 1683037272
     timestamp_before = 1683037270
     # should return false
