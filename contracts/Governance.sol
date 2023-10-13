@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.3;
+pragma solidity 0.8.3;
 
 import "../interfaces/IOracle.sol";
 import "../interfaces/IERC20.sol";
@@ -109,8 +109,9 @@ contract Governance is UsingTellor {
      */
     function beginDispute(bytes32 _queryId, uint256 _timestamp) external {
         // Ensure value actually exists
+        address _reporter = oracle.getReporterByTimestamp(_queryId, _timestamp);
         require(
-            oracle.getBlockNumberByTimestamp(_queryId, _timestamp) != 0,
+            _reporter != address(0),
             "no value exists at given timestamp"
         );
         bytes32 _hash = keccak256(abi.encodePacked(_queryId, _timestamp));
@@ -126,17 +127,14 @@ contract Governance is UsingTellor {
         // Initialize dispute information - query ID, timestamp, value, etc.
         _thisDispute.queryId = _queryId;
         _thisDispute.timestamp = _timestamp;
-        _thisDispute.disputedReporter = oracle.getReporterByTimestamp(
-            _queryId,
-            _timestamp
-        );
+        _thisDispute.disputedReporter = _reporter;
         // Initialize vote information - hash, initiator, block number, etc.
         _thisVote.identifierHash = _hash;
         _thisVote.initiator = msg.sender;
         _thisVote.blockNumber = block.number;
         _thisVote.startDate = block.timestamp;
         _thisVote.voteRound = _voteRounds.length;
-        disputeIdsByReporter[_thisDispute.disputedReporter].push(_disputeId);
+        disputeIdsByReporter[_reporter].push(_disputeId);
         uint256 _disputeFee = getDisputeFee();
         if (_voteRounds.length == 1) {
             require(
@@ -145,9 +143,13 @@ contract Governance is UsingTellor {
             );
             openDisputesOnId[_queryId]++;
             // calculate dispute fee based on number of open disputes on query ID
-            _disputeFee = _disputeFee * 2**(openDisputesOnId[_queryId] - 1);
+            if(openDisputesOnId[_queryId] > 4) {
+                _disputeFee = oracle.getStakeAmount();
+            } else {
+                _disputeFee = _disputeFee * 2**(openDisputesOnId[_queryId] - 1);
+            }
             // slash a single stakeAmount from reporter
-            _thisDispute.slashedAmount = oracle.slashReporter(_thisDispute.disputedReporter, address(this));
+            _thisDispute.slashedAmount = oracle.slashReporter(_reporter, address(this));
             _thisDispute.value = oracle.retrieveData(_queryId, _timestamp);
             oracle.removeValue(_queryId, _timestamp);
         } else {
@@ -156,12 +158,13 @@ contract Governance is UsingTellor {
                 block.timestamp - voteInfo[_prevId].tallyDate < 1 days,
                 "New dispute round must be started within a day"
             );
-            _disputeFee = _disputeFee * 2**(_voteRounds.length - 1);
+            if(_voteRounds.length > 4) {
+                _disputeFee = oracle.getStakeAmount();
+            } else {
+                _disputeFee = _disputeFee * 2**(_voteRounds.length - 1);
+            }
             _thisDispute.slashedAmount = disputeInfo[_voteRounds[0]].slashedAmount;
             _thisDispute.value = disputeInfo[_voteRounds[0]].value;
-        }
-        if (_disputeFee > oracle.getStakeAmount()) {
-          _disputeFee = oracle.getStakeAmount();
         }
         _thisVote.fee = _disputeFee;
         voteCount++;
@@ -173,7 +176,7 @@ contract Governance is UsingTellor {
             _disputeId,
             _queryId,
             _timestamp,
-            _thisDispute.disputedReporter
+            _reporter
         );
     }
 
@@ -393,8 +396,8 @@ contract Governance is UsingTellor {
      * @param _invalidQuery is array of whether or not the dispute is valid
      */
     function voteOnMultipleDisputes(
-        uint256[] memory _disputeIds,
-        bool[] memory _supports,
+        uint256[] memory _disputeIds, 
+        bool[] memory _supports, 
         bool[] memory _invalidQuery
     ) external {
         for (uint256 _i = 0; _i < _disputeIds.length; _i++) {
